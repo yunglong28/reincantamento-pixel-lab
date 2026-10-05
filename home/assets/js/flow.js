@@ -29,8 +29,9 @@
     if (!ICONS) return;
 
     const MODES = {
-        flow:  { bpm: 84, fill: 0.14, figures: false, inverse: 0, brand: 1, hold: [24, 72], leave: 0.7 },
-        merge: { bpm: 96, fill: 0.24, figures: true, inverse: 0.12, brand: 3, hold: [16, 48], leave: 0.6 },
+        // max: symbols on screen at once (settled + ribbons + drifters); intro: silent sixteenths before the first one
+        flow:  { bpm: 84, fill: 0.14, figures: false, inverse: 0, brand: 1, hold: [24, 72], leave: 0.7, max: Infinity, intro: 0 },
+        merge: { bpm: 96, fill: 0.24, figures: true, inverse: 0.12, brand: 3, hold: [24, 64], leave: 0.6, max: 6, intro: 32 },
     };
     const script = document.currentScript;
     const M = MODES[(script && script.dataset.mode) || 'flow'] || MODES.flow;
@@ -346,17 +347,21 @@
     let figure = null, pending = [];
     // the piece breathes over sixteen bars: density rises and falls around FILL
     const breath = () => 0.5 - 0.5 * Math.cos(2 * Math.PI * (sixteenth / 32) / 8);
-    const capacity = () => Math.max(3, Math.round(free.length * FILL * (0.5 + 0.9 * breath())));
+    const onScreenCount = () => settled.size + migrations.length + drifters.length;
+    // a slow start: two symbols in the first phrase, one more each phrase after, up to the cap
+    const ramp = () => 2 + Math.floor(Math.max(0, sixteenth) / 32);
+    const capacity = () => Math.min(M.max, ramp(), Math.max(3, Math.round(free.length * FILL * (0.5 + 0.9 * breath()))));
     function request(c, r, o = {}) {
         if (!freeSet.has(key(c, r)) || settled.has(key(c, r)) || reserved.has(key(c, r))) return;
-        if (settled.size + migrations.length >= capacity()) return;
+        if (onScreenCount() >= capacity()) return;
         const id = o.id ?? pickId(); if (id == null) return;
-        settle(c, r, id, o);
+        const gl = settle(c, r, id, o);
+        if (sixteenth < 32) gl.rate = Math.max(1, Math.ceil(gl.px.length / 16));      // the first glyphs take their time
     }
 
     // ---- rhythm
     const euclid = (k, n) => { const o = []; for (let i = 0; i < n; i++) o.push(Math.floor((i + 1) * k / n) - Math.floor(i * k / n)); return o; };
-    let sixteenth = 0, pattern = euclid(3, 8), nextBeat = 0;
+    let sixteenth = -M.intro, pattern = euclid(3, 8), nextBeat = 0;
     let hushNext = false;
     function flock(t0) {
         // the holding glyphs leave together, all bending the same way, landing on the same downbeat
@@ -383,6 +388,7 @@
     }
 
     function onSixteenth(now) {
+        if (sixteenth < 0) { sixteenth++; return; }                                   // the opening silence
         const s = sixteenth % 32, phrase = Math.floor(sixteenth / 32);
         if (s === 0) pattern = euclid([2, 3, 5][rnd(3)], [8, 8, 16][rnd(3)]);
         for (const gl of [...settled.values()]) stepSettled(gl);
@@ -400,7 +406,7 @@
             if (!hits.length && s % 2 === 1 && chance(0.04)) { const f = freeCell(); if (f) hits = [[...f, {}]]; }   // a ghost note
             for (const [c, r, o] of hits) { if (o.delay) pending.push([sixteenth + o.delay, c, r, o]); else request(c, r, o); }
             pending = pending.filter(p => { if (p[0] > sixteenth) return true; request(p[1], p[2], p[3]); return false; });
-        } else if (pattern[s % pattern.length] && settled.size + migrations.length < target && chance(0.8)) {
+        } else if (pattern[s % pattern.length] && onScreenCount() < target && chance(0.8)) {
             const e = emptyCells(), id = pickId();
             if (e.length && id != null) { const [c, r] = e[rnd(e.length)]; settle(c, r, id); }
         }
