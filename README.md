@@ -59,4 +59,13 @@ python3 tools/build_icons.py --sheet   # src/icons.js + build/compare.png (v1 gr
 - **What it adapts to.** It reads the colour tokens, so acid mode works too. It also respects `prefers-reduced-motion` and pauses when the tab is hidden.
 - **Where the links go.** The menu links point at the live site, because only the homepage was copied here.
 
+`home/crazy.html` runs the same engine with `data-mode="crazy"`:
+
+- **Tempo.** 132 BPM, with a triplet layer running against the sixteenths.
+- **No repeats.** The same symbol never appears twice on screen at the same time.
+- **Shapes.** Some glyphs take a 2×2 block of cells, and up to three glyphs walk from cell to cell.
+- **Drops.** Falling drops seed a glyph where they land.
+- **Texture.** Glitches shift rows of pixels and add ghost copies, and the last frames fade out as trails.
+- **Safety.** There are no full-screen flashes.
+
 To preview it, run `python3 -m http.server` from the repo root and open `/home/index.html`. `home/` loads `../src/icons.js`, so any change made in the lab and rebuilt with `build_icons.py` reaches the home page too.
