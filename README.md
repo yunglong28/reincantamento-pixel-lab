@@ -68,4 +68,10 @@ python3 tools/build_icons.py --sheet   # src/icons.js + build/compare.png (v1 gr
 - **Texture.** Glitches shift rows of pixels and add ghost copies, and the last frames fade out as trails.
 - **Safety.** There are no full-screen flashes.
 
+`home/flow.html` uses its own engine, `home/assets/js/flow.js`, in which the grid loosens its hold on the glyphs. It runs at 84 BPM, and the same symbol never appears twice on screen at once.
+
+- **Settling.** Glyphs still settle into squares of the grid.
+- **Migrations.** When a glyph's time is up, it usually breaks into a ribbon of pixels. The ribbon snakes along an S-curve to another square and lands there as a different symbol.
+- **Drifters.** Sometimes a glyph lifts off the grid instead and wanders on slow Lissajous paths. The white grid lines bend around it like a lens. When it tires, it glides back into the nearest empty square.
+
 To preview it, run `python3 -m http.server` from the repo root and open `/home/index.html`. `home/` loads `../src/icons.js`, so any change made in the lab and rebuilt with `build_icons.py` reaches the home page too.
