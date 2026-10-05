@@ -5,75 +5,111 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>REINCANTAMENTO pixel lab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="src/style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
 </head>
 <body>
-<header>
-<h1>PIXEL LAB</h1>
-<nav id="sets" aria-label="Set"></nav>
-</header>
-<main>
-<section id="list" aria-label="Icone"></section>
-<section id="editor">
-<div class="row"><span class="lbl">Nome</span><strong id="name"></strong><span id="lock" class="tag" hidden>riferimento brand</span></div>
-<div id="stage">
-<div id="canvaswrap"><canvas id="cv"></canvas></div>
-<div id="side">
-<div class="prev" id="prev"></div>
-<div id="stats"></div>
-<div id="refbox" hidden><span class="lbl">Confronto</span><div class="prev" id="ref"></div></div>
-</div>
-</div>
-<div class="row"><span class="lbl">Disegno</span>
-<button id="sym" title="Simmetria di pittura">Simmetria: no</button>
-<button id="showref" title="Mostra occhio e goccia alla stessa scala">Confronto brand</button>
-<button data-op="undo" title="⌘Z">Annulla</button>
-<button data-op="redo" title="⇧⌘Z">Ripeti</button>
-<button data-op="reset">Originale</button>
-</div>
-<div class="row"><span class="lbl">Operazioni</span>
-<button data-op="stairs" title="Ogni giunto diagonale diventa un gradino, come nel logo">Gradini</button>
-<button data-op="orphans">Togli orfani</button>
-<button data-op="flipH">Rifletti ↔</button>
-<button data-op="flipV">Rifletti ↕</button>
-<button data-op="rot180">Ruota 180°</button>
-<button data-op="outline">Contorno</button>
-<button data-op="fill">Riempi</button>
-<button data-op="dither">Retino</button>
-<button data-op="invert">Inverti</button>
-</div>
-<div class="row"><span class="lbl">Sposta</span>
-<button data-op="L" aria-label="Sposta a sinistra">←</button>
-<button data-op="R" aria-label="Sposta a destra">→</button>
-<button data-op="U" aria-label="Sposta su">↑</button>
-<button data-op="D" aria-label="Sposta giù">↓</button>
-<span class="lbl gap">Tela</span>
-<button data-op="addC">+ col</button><button data-op="remC">− col</button>
-<button data-op="addR">+ riga</button><button data-op="remR">− riga</button>
-<button data-op="trim">Rifila</button>
-</div>
-<div class="row"><span class="lbl">Colore</span>
-<button class="ink on" data-ink="#0000FF">Blu</button>
-<button class="ink" data-ink="#D9D9D9">Grigio</button>
-<button class="ink" data-ink="#000000">Nero</button>
-</div>
-<div class="row"><span class="lbl">Modulo SVG</span>
-<button class="mod on" data-mod="eye" title="4.872 pt, come logo.svg e marchio.svg">occhio 4.872</button>
-<button class="mod" data-mod="drop" title="8.619 pt, come la goccia">goccia 8.619</button>
-<button class="mod" data-mod="unit" title="1 unità per pixel">1</button>
-</div>
-<div class="row"><span class="lbl">Esporta</span>
-<button data-ex="png">PNG ×32</button>
-<button data-ex="svg">SVG</button>
-<button data-ex="zip">Set in ZIP</button>
-<button data-ex="json">Tutto in JSON</button>
-<label class="btn">Importa JSON<input type="file" id="import" accept="application/json,.json" hidden></label>
-</div>
-<div id="msg" role="status"></div>
+<div class="app">
+
+<aside class="library" aria-label="Libreria">
+  <div class="brandmark">PIXEL LAB</div>
+  <label class="field">
+    <span class="eyebrow">Set</span>
+    <select id="set"></select>
+  </label>
+  <div id="list" class="icons"></div>
+</aside>
+
+<section class="workspace" aria-label="Editor">
+  <div class="toolbar">
+    <div class="title">
+      <h1 id="name"></h1>
+      <span id="lock" class="pill" hidden>Riferimento</span>
+    </div>
+    <div class="group">
+      <button class="icon" data-op="undo" title="Annulla (⌘Z)" aria-label="Annulla">↶</button>
+      <button class="icon" data-op="redo" title="Ripeti (⇧⌘Z)" aria-label="Ripeti">↷</button>
+    </div>
+    <div class="seg" role="radiogroup" aria-label="Simmetria">
+      <button data-sym="none" class="on" role="radio">Libero</button>
+      <button data-sym="mirror" role="radio" title="Disegna a specchio">Specchio</button>
+      <button data-sym="rot" role="radio" title="Simmetria a 180°, come l’occhio">180°</button>
+    </div>
+  </div>
+
+  <div class="canvaswrap"><canvas id="cv"></canvas></div>
+  <p class="hint">Clic su un pixel per accenderlo o spegnerlo. Trascina per continuare.</p>
 </section>
-</main>
+
+<aside class="inspector" aria-label="Proprietà">
+
+  <section class="panel">
+    <div class="check" id="check"></div>
+    <button id="fix" class="primary wide">Correggi secondo il logo</button>
+    <label class="toggle"><input type="checkbox" id="marks" checked> Mostra problemi sulla tela</label>
+  </section>
+
+  <section class="panel">
+    <h2 class="eyebrow">Anteprima</h2>
+    <div class="prev" id="prev"></div>
+    <label class="toggle"><input type="checkbox" id="showref"> Accanto a occhio e goccia</label>
+    <dl class="meta" id="meta"></dl>
+  </section>
+
+  <details class="panel" open>
+    <summary class="eyebrow">Trasforma</summary>
+    <div class="tools">
+      <button data-op="flipH" title="Rifletti orizzontale">⇋ Rifletti</button>
+      <button data-op="flipV" title="Rifletti verticale">⇵ Capovolgi</button>
+      <button data-op="rot180">⟲ Ruota 180°</button>
+      <button data-op="invert">◐ Inverti</button>
+      <button data-op="outline">▢ Contorno</button>
+      <button data-op="fill">■ Riempi</button>
+      <button data-op="dither">▦ Retino</button>
+      <button data-op="reset">↺ Originale</button>
+    </div>
+    <div class="pad">
+      <span class="eyebrow">Sposta</span>
+      <div class="dpad">
+        <button class="icon" data-op="U" aria-label="Su">↑</button>
+        <button class="icon" data-op="L" aria-label="Sinistra">←</button>
+        <button class="icon" data-op="R" aria-label="Destra">→</button>
+        <button class="icon" data-op="D" aria-label="Giù">↓</button>
+      </div>
+      <span class="eyebrow">Tela</span>
+      <div class="sizer">
+        <span class="pair"><span>Colonne</span><button class="icon" data-op="remC" aria-label="Meno colonne">−</button><button class="icon" data-op="addC" aria-label="Più colonne">+</button></span>
+        <span class="pair"><span>Righe</span><button class="icon" data-op="remR" aria-label="Meno righe">−</button><button class="icon" data-op="addR" aria-label="Più righe">+</button></span>
+        <button data-op="trim" title="Taglia il bordo vuoto">Rifila</button>
+      </div>
+    </div>
+  </details>
+
+  <section class="panel">
+    <h2 class="eyebrow">Esporta</h2>
+    <div class="row2">
+      <label class="field"><span>Colore</span>
+        <select id="ink"><option value="#0000FF">Blu</option><option value="#D9D9D9">Grigio</option><option value="#000000">Nero</option></select>
+      </label>
+      <label class="field"><span>Modulo SVG</span>
+        <select id="mod"><option value="eye">Occhio · 4.872 pt</option><option value="drop">Goccia · 8.619 pt</option><option value="unit">1 pt</option></select>
+      </label>
+    </div>
+    <div class="row2">
+      <button class="primary" data-ex="svg">Scarica SVG</button>
+      <button data-ex="png">Scarica PNG</button>
+    </div>
+    <div class="links">
+      <button class="link" data-ex="zip">Set intero (ZIP)</button>
+      <button class="link" data-ex="json">Backup JSON</button>
+      <label class="link">Importa JSON<input type="file" id="import" accept="application/json,.json" hidden></label>
+    </div>
+    <div id="msg" role="status"></div>
+  </section>
+
+</aside>
+</div>
 <script src="src/icons.js"></script>
 <script src="src/grid.js"></script>
 <script src="src/app.js"></script>
