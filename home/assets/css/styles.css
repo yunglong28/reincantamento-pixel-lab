@@ -1,0 +1,903 @@
+/* ===================== */
+/* FONTS                 */
+/* ===================== */
+/* Display style: Figma "Display" = Redaction 20, 40/44 */
+@font-face {
+    font-family: 'Redaction20';
+    src: url('../fonts/Redaction20-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Redaction 50 — heavier "redacted" cut, used on hover of the blue keywords */
+@font-face {
+    font-family: 'Redaction50';
+    src: url('../fonts/Redaction50-Regular.woff2') format('woff2'),
+         url('../fonts/Redaction50-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Redaction 35 — the display cut of the section pages (card titles, year) and
+   of the footer wordmark, which every page carries. Redaction 20 stays the
+   home-page statement face. */
+@font-face {
+    font-family: 'Redaction35';
+    src: url('../fonts/Redaction35-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Redaction35';
+    src: url('../fonts/Redaction35-Italic.woff') format('woff');
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap;
+}
+
+/* Apfel Grotezk — Menu / Body / Data styles (Figma).
+   One family, weight-mapped: Regular 400, Mittel 500, Fett 700. */
+@font-face {
+    font-family: 'Apfel Grotezk';
+    src: url('../fonts/ApfelGrotezk-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Apfel Grotezk';
+    src: url('../fonts/ApfelGrotezk-Mittel.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Apfel Grotezk';
+    src: url('../fonts/ApfelGrotezk-Fett.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* ===================== */
+/* VARIABLES             */
+/* ===================== */
+:root {
+    --grigio: #d9d9d9;          /* GRIGIO */
+    --grid-line: #ffffff;       /* BIANCO grid lines */
+    --grid-cell: 90px;          /* base module target — JS refines per axis below */
+    --grid-col: var(--grid-cell);   /* column width: fits the viewport WIDTH exactly  */
+    --grid-row: var(--grid-cell);   /* row height:   fits the viewport HEIGHT exactly */
+    --blu: #0009ff;             /* BLU */
+    --bianco: #ffffff;          /* BIANCO */
+    --nero: #111111;
+
+    /* ---- COLOUR TOKENS ----
+       Every page paints with these, never with the raw colours above. That is
+       what lets acid mode remap the whole site from one place: the block below
+       redefines the same names and nothing else has to change. */
+    --bg: var(--grigio);        /* page fill                                  */
+    --band: var(--blu);         /* filled bands: header, footer, title bars   */
+    --ink: var(--blu);          /* text & accents on --bg                     */
+    --on-band: var(--bianco);   /* text on --band                             */
+    --line: var(--grid-line);   /* grid lines on --bg                         */
+    --band-line: rgba(255, 255, 255, 0.28);  /* grid lines inside a band      */
+    --media: #b8b8b8;           /* image / video placeholder                  */
+    --on-media: #ffffff;        /* text laid over a still                     */
+    --statement-ink: var(--bianco);   /* home page statement                  */
+    --statement-hl: var(--blu);       /* its highlighted words                */
+
+    /* Display = Redaction 20 (Figma). Menu/Body/Data = Apfel Grotezk. */
+    --font-display: 'Redaction20', Georgia, 'Times New Roman', serif;
+    --font-display-hover: 'Redaction50', 'Redaction20', Georgia, serif;
+    --font-menu: 'Apfel Grotezk', 'Helvetica Neue', Arial, sans-serif;
+    --font-serif: 'Redaction35', Georgia, 'Times New Roman', serif;
+
+    /* Module the footer is measured in. The section pages hand it their own
+       --cell (site.js); the home page has no --cell, so it falls back to the
+       Figma column count — 16 across the frame, 13 on mobile. */
+    --foot-mod: calc(100vw / 16);
+
+    --page-margin: clamp(24px, 5vw, 64px);
+}
+
+/* ===================== */
+/* ACID MODE             */
+/* ===================== */
+/* The "Verde" variant from Figma: plum ground, purple bands, acid-green ink.
+   theme.js sets data-theme on <html> before first paint, so the page never
+   flashes the default palette; the switch lives at the bottom right of every
+   page that has a footer, and in the header row of the ones that don't. */
+:root[data-theme="acid"] {
+    --bg: #210013;
+    --band: #622779;
+    --ink: #6fff55;
+    --on-band: #6fff55;
+    --line: #b74ddf;
+    --band-line: rgba(183, 77, 223, 0.4);
+    --media: #b74ddf;
+    --on-media: #210013;
+    --statement-ink: #6fff55;
+    --statement-hl: #b74ddf;
+}
+
+/* ===================== */
+/* RESET                 */
+/* ===================== */
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    min-height: 100vh;
+    background-color: var(--bg);
+    background-image:
+        repeating-linear-gradient(to right, var(--line) 0, var(--line) 1px, transparent 1px, transparent var(--grid-col)),
+        repeating-linear-gradient(to bottom, var(--line) 0, var(--line) 1px, transparent 1px, transparent var(--grid-row));
+    color: var(--nero);
+    font-family: var(--font-display);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+/* ===================== */
+/* A11Y                  */
+/* ===================== */
+/* Skip link — visible only when focused via keyboard */
+.skip-link {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 8px;
+    padding: 8px 14px;
+    background: var(--band);
+    color: var(--on-band);
+    font-family: var(--font-menu);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transform: translateY(-150%);
+    transition: transform 0.2s ease;
+    z-index: 200;
+}
+
+.skip-link:focus {
+    transform: translateY(0);
+}
+
+:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 3px;
+}
+
+/* ===================== */
+/* HEADER / NAV          */
+/* ===================== */
+/* Home / About / Lab paint nothing above the fold, so the header floats over
+   the screen. The section pages start their grid at the top of the document
+   instead, and the header takes the first row of it — same markup, same cells,
+   see `.page .site-header` in sections.css. */
+.site-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: var(--grid-row);    /* header occupies exactly one grid row */
+    display: flex;
+    align-items: stretch;       /* corner cells (logo, About) fill the full row height */
+    padding: 0;                 /* logo cell flush left, About cell flush right */
+    /* Transparent: the body grid stays VISIBLE across the header. The logo sits in
+       the first cell, the About button in the last cell; only the nav region in
+       between is masked — see .main-nav below. */
+    z-index: 100;
+}
+
+/* Home / About / Lab: the header stays on screen while the page scrolls, so it
+   cannot be a window onto the body grid — the grid and the statement would
+   slide behind the eye and it would read as if the logo moved. It is a row of
+   its own instead: the page fill, the same column lines painted from the same
+   left edge (so they meet the body's), and a closing line along the bottom. */
+body:not(.page) .site-header {
+    background-color: var(--bg);
+    background-image:
+        repeating-linear-gradient(to right, var(--line) 0, var(--line) 1px, transparent 1px, transparent var(--grid-col)),
+        linear-gradient(var(--line), var(--line));
+    background-size: auto, 100% 1px;
+    background-repeat: repeat, no-repeat;
+    box-shadow: 0 1px 0 var(--line);
+}
+
+body.theme-blue .site-header {
+    background-color: var(--band);
+}
+
+.brand {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;    /* centre the eye within its grid cell */
+    width: var(--grid-col);     /* the brand occupies exactly the first grid cell */
+    flex-shrink: 0;
+    position: relative;
+    z-index: 110;            /* keep the logo above the mobile dropdown panel */
+}
+
+.brand img {
+    width: 56px;
+    height: auto;            /* vector SVG — scales crisply */
+}
+
+.main-nav {
+    display: flex;
+    align-items: center;
+    gap: clamp(20px, 4vw, 48px);
+    margin-left: auto;          /* push the menu — and the About cell after it — to the right */
+}
+
+/* Desktop: the nav region is the only masked part of the header — a solid GRIGIO
+   rectangle covering the grid behind the menu items. The rest of the header row
+   keeps its visible squares. Stretches to full row height and bleeds to the
+   viewport's right edge (cancelling the header's right padding). */
+@media (min-width: 769px) {
+    .main-nav {
+        align-self: stretch;
+        background: var(--bg);
+        padding-inline: clamp(20px, 3vw, 40px);  /* mask ends where the blue About cell begins */
+    }
+}
+
+/* Figma "Menu" style, all items in BLU (per the HEADER frame) */
+.main-nav a {
+    position: relative;
+    font-family: var(--font-menu);
+    font-size: 14px;
+    line-height: 17px;
+    font-weight: 500;          /* Apfel Grotezk "Mittel" */
+    letter-spacing: 0.08em;    /* Figma Menu: 8% */
+    text-transform: uppercase;
+    color: var(--ink);
+    transition: opacity 0.2s ease;
+}
+
+/* Animated underline indicator (blu) for hover + active */
+.main-nav a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -4px;
+    width: 100%;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.25s ease;
+}
+
+.main-nav a:hover::after,
+.main-nav a:focus-visible::after,
+.main-nav a.is-active::after {
+    transform: scaleX(1);
+}
+
+/* ---- WRITINGS: two bodies of work, one menu ----
+   Writing lives on two pages — the DROPS newsletter and the archive of what
+   was published elsewhere before it — so the item holds a cell of its own and
+   fills it on hover, dropping the two names below as a column of the same
+   squares. :focus-within opens it from the keyboard as well; on a touch screen
+   there is no hover, so tapping the item simply follows it to the drops. */
+.nav-item {
+    position: relative;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+}
+
+.nav-item > a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* The square: one cell wide, the full height of the header row. */
+    min-width: var(--grid-col);
+    height: 100%;
+}
+
+.nav-item:hover > a,
+.nav-item:focus-within > a {
+    background: var(--band);
+    color: var(--on-band);
+}
+
+/* On the current section the cell simply stays on. An underline under a
+   cell-sized box would hang past the header row and double the grid line it
+   crosses; the fill says it better, and matches the corner cell. */
+.nav-item > a.is-active {
+    background: var(--band);
+    color: var(--on-band);
+}
+
+.nav-item > a::after {
+    content: none;
+}
+
+.nav-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    visibility: hidden;
+}
+
+.nav-item:hover .nav-menu,
+.nav-item:focus-within .nav-menu {
+    visibility: visible;
+}
+
+/* Each name is another square under the first, a grid line apart. */
+.nav-menu a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--grid-row);
+    margin-top: 1px;
+    background: var(--band);
+    color: var(--on-band);
+}
+
+.nav-menu a:hover {
+    opacity: 0.85;
+}
+
+.nav-menu a::after {
+    content: none;          /* the fill carries the state here */
+}
+
+/* ---- Corner cell: a solid BLU cell in the top-right corner (after the nav) ----
+   It reads ABOUT on the home page and HOME on every other page — the same
+   cell the section pages carry at the end of their header band. */
+.about-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: var(--grid-col);     /* occupies exactly the last grid cell, flush to the edge */
+    background: var(--band);
+    color: var(--on-band);
+    font-family: var(--font-menu);
+    font-size: 14px;
+    line-height: 17px;
+    font-weight: 500;           /* Apfel Grotezk "Mittel" */
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: opacity 0.2s ease;
+}
+
+.about-btn:hover,
+.about-btn:focus-visible {
+    opacity: 0.85;
+}
+
+/* ---- Mobile nav toggle (hamburger) ---- */
+.nav-toggle {
+    display: none;            /* hidden on desktop and when JS is unavailable */
+    margin-left: auto;        /* on mobile, push the hamburger + About cell to the right */
+    position: relative;
+    width: 30px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    z-index: 110;            /* stays above the dropdown panel */
+}
+
+.nav-toggle span {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--ink);
+    transition: top 0.3s ease, transform 0.3s ease, opacity 0.2s ease;
+}
+
+.nav-toggle span:nth-child(1) { top: 0; }
+.nav-toggle span:nth-child(2) { top: 10px; }
+.nav-toggle span:nth-child(3) { top: 20px; }
+
+.nav-toggle[aria-expanded="true"] span:nth-child(1) { top: 10px; transform: rotate(45deg); }
+.nav-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+.nav-toggle[aria-expanded="true"] span:nth-child(3) { top: 10px; transform: rotate(-45deg); }
+
+/* ===================== */
+/* GRID PLACEMENT LAYER  */
+/* ===================== */
+/* A real CSS grid aligned to the background grid module (--grid-cell, from the
+   0,0 origin) so media can occupy actual squares. Positioned against the
+   document origin — no padded ancestor — so its columns line up with the
+   white grid lines painted on <body>. Transparent: only its cells paint. */
+.grid-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    /* The first screen as main.js measured it, not 100dvh: dvh grows as a
+       phone's toolbar slides away, which dragged the media cell down mid-scroll. */
+    height: var(--screen-h, 100svh);
+    display: grid;
+    /* Explicit auto-fill tracks (not grid-auto-rows) so negative line numbers
+       count from the end — lets bottom content anchor to the last full row.
+       align-content stays at start, so these tracks line up with the body grid. */
+    grid-template-columns: repeat(auto-fill, var(--grid-col));
+    grid-template-rows: repeat(auto-fill, var(--grid-row));
+    pointer-events: none;   /* never blocks interaction with content above */
+    overflow: hidden;       /* a cell can never extend the document */
+    z-index: 1;             /* above the body grid, below the statement (z 2) */
+}
+
+/* Pixel-lab glyphs drawn into the grid squares (glyphs.js). Same origin and
+   module as the grid layer, under it in the DOM so the media cell stays on top. */
+.glyph-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: var(--screen-h, 100svh);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* One media square. object-fit: cover fills the cell and crops; BLU shows as a
+   placeholder until the clip loads (and as the reduced-motion fallback). */
+.media-cell {
+    position: relative;
+    overflow: hidden;
+    background: var(--media);
+}
+
+.media-cell .media,
+.media-cell img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ===================== */
+/* MAIN STATEMENT        */
+/* ===================== */
+.hero {
+    position: relative;     /* containing block for the JS-snapped statement */
+    min-height: 100vh;
+    min-height: 100dvh;     /* exact one-screen height on mobile browser chrome */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* No-JS fallback layout: reserve one grid row top & bottom and centre the
+       statement. With JS, main.js takes the statement out of flow and snaps its
+       box to whole grid cells (see placeStatement) so its edges land on the grid
+       lines — the centring/padding here only governs the JS-disabled baseline. */
+    padding: var(--grid-row) var(--page-margin);
+}
+
+/* Centered hero panel — solid GRIGIO fill covers the grid where the text sits;
+   the grid shows around it. */
+.statement {
+    position: relative;
+    z-index: 2;             /* statement text always sits above the media layer */
+    width: fit-content;
+    max-width: 100%;
+    /* Column flex so the text stays vertically centred when JS snaps the box to
+       a whole number of cells (the box is then a little taller than the text). */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(40px, 6vw, 80px) clamp(24px, 4vw, 56px);
+    font-size: clamp(26px, 3.4vw, 40px);
+    line-height: 1.05;          /* 42px at 40px (Figma Display) */
+    font-weight: 400;
+    text-align: left;           /* a bandiera sinistra */
+    color: var(--statement-ink);
+    background: var(--bg);
+}
+
+.statement p + p {
+    margin-top: 1.1em;
+}
+
+.statement .hl {
+    position: relative;
+    display: inline-block;
+    color: var(--statement-hl);
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+/* Ghost: renders the word in the wider Redaction 50 cut, invisibly, to
+   reserve its advance width up front. The swap on hover then never
+   reflows surrounding text (Redaction 50 is ~1% wider than 20). */
+.statement .hl::before {
+    content: attr(data-word);
+    display: block;
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    font-family: var(--font-display-hover);
+    pointer-events: none;
+}
+
+/* Hover swaps the display cut to Redaction 50 (heavier "redacted" ink). */
+.statement .hl:hover {
+    font-family: var(--font-display-hover);
+}
+
+/* ===================== */
+/* FOOTER                */
+/* ===================== */
+/* The band that closes every page — home included. Its rhythm is measured in
+   the page module: the section pages hand it their own --cell (site.js), the
+   home page has none, so --foot-mod stands in. Everything below reads --fmod. */
+.site-footer {
+    --fmod: var(--cell, var(--foot-mod));
+    /* +1px so the grid line on the band's leading edge stays visible, as in Figma */
+    margin-top: calc(var(--fmod) + 1px);
+    padding: calc(var(--fmod) * 0.25) calc(var(--fmod) * 0.667);
+    background: var(--band);
+    color: var(--on-band);
+    font-family: var(--font-menu);
+}
+
+/* Home: the statement screen already ends on a whole row — the media cell in
+   the bottom left closes it — so the band starts on the next line rather than
+   after an empty row. */
+.site-footer--flush {
+    margin-top: 1px;
+}
+
+/* Wordmark: scales with the module, kept small so the band stays a slim close. */
+.site-footer__mark {
+    font-family: var(--font-serif);
+    font-size: calc(var(--fmod) * 0.9);
+    line-height: 1.2;
+    font-weight: 400;
+    white-space: nowrap;
+}
+
+.footer-cols {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 40px;
+    margin-top: calc(var(--fmod) * 0.3);
+}
+
+.newsletter__label {
+    font-family: var(--font-menu);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.newsletter__field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: min(400px, 100%);
+    margin-top: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid currentColor;
+}
+
+.newsletter__field input {
+    flex: 1;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-family: var(--font-menu);
+    font-size: 14px;
+    line-height: 22px;
+}
+
+.newsletter__field input::placeholder {
+    color: inherit;
+    opacity: 0.75;
+}
+
+.newsletter__field button {
+    border: 0;
+    background: none;
+    color: inherit;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.footer-social {
+    display: flex;
+    gap: 28px;
+    font-family: var(--font-menu);
+    font-size: 12px;
+}
+
+.footer-social a:hover,
+.footer-legal a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.footer-bottom {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 24px;
+    margin-top: calc(var(--fmod) * 0.4);
+    font-family: var(--font-menu);
+    font-size: 12px;
+    line-height: 18px;
+}
+
+.footer-legal {
+    display: flex;
+    gap: 20px;
+}
+
+/* ===================== */
+/* RESPONSIVE            */
+/* ===================== */
+@media (max-width: 768px) {
+    .brand img {
+        width: 44px;
+    }
+
+    .hero {
+        align-items: flex-start;
+        padding-top: calc(var(--page-margin) * 4.5);
+    }
+
+    .statement {
+        font-size: clamp(24px, 6vw, 30px);
+    }
+
+    /* The hard breaks set the desktop line lengths; at this width they leave
+       stub lines, so let the copy wrap to the column instead. */
+    .statement br {
+        display: none;
+    }
+
+    /* The mobile Figma frame is 390 on a 30px module → 13 columns. */
+    :root {
+        --foot-mod: calc(100vw / 13);
+    }
+
+    .site-footer {
+        padding: calc(var(--fmod) * 0.6) var(--fmod);
+    }
+
+    .site-footer__mark {
+        font-size: calc(var(--fmod) * 0.9);
+    }
+
+    .footer-cols {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 24px;
+        margin-top: calc(var(--fmod) * 0.6);
+    }
+
+    .footer-bottom {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        margin-top: calc(var(--fmod) * 0.6);
+    }
+
+    /* When JS is available, collapse the nav behind a toggle. Without JS the
+       toggle stays hidden and the nav remains a visible (wrapping) row. */
+    .js .nav-toggle {
+        display: block;
+    }
+
+    .js .main-nav {
+        position: fixed;
+        inset: 0;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 28px;
+        padding: var(--page-margin);
+        background: var(--bg);
+        transform: translateY(-100%);
+        transition: transform 0.3s ease;
+        z-index: 90;            /* below the fixed brand + toggle (header z-index 100) */
+    }
+
+    .js .main-nav[data-open="true"] {
+        transform: translateY(0);
+    }
+
+    .js .main-nav a {
+        font-size: 22px;
+        line-height: 1.2;
+    }
+
+    /* No hover on a touch screen: in the full-screen panel the two names are
+       simply there, indented under WRITINGS. */
+    .js .nav-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .js .nav-item > a {
+        min-width: 0;
+        justify-content: flex-start;
+    }
+
+    .js .nav-menu {
+        position: static;
+        visibility: visible;
+        width: auto;
+        margin-left: 18px;
+    }
+
+    .js .nav-menu a {
+        height: auto;
+        margin-top: 10px;
+        background: none;
+        color: var(--ink);
+        justify-content: flex-start;
+        font-size: 16px;
+    }
+
+    /* No-JS fallback: keep the row from overflowing off-screen */
+    .main-nav {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 14px 18px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+    }
+
+    /* Don't autoplay motion; fall back to the cell's poster / placeholder. */
+    .media-cell .media {
+        display: none;
+    }
+}
+
+/* ===================== */
+/* ABOUT PAGE — blue theme */
+/* ===================== */
+/* about.html reuses the home markup with <body class="theme-blue">: the page
+   fill flips to BLU (the white grid lines stay), the grid-masking fills follow,
+   and text/accents flip to BIANCO for contrast. The About control becomes the
+   current-page state (light cell, blu label). The logo swaps to LOGO-gray in the
+   markup so it reads on the blue field. */
+body.theme-blue {
+    background-color: var(--band);
+}
+
+body.theme-blue .statement {
+    background: var(--band);         /* mask the grid behind the text in blue */
+}
+
+body.theme-blue .statement .hl {
+    color: var(--on-band);           /* blu-on-blu would vanish — flip highlights */
+}
+
+body.theme-blue .main-nav a,
+body.theme-blue .main-nav .nav-off,   /* blu-on-blu would vanish */
+body.theme-blue .theme-switch {
+    color: var(--on-band);
+}
+
+body.theme-blue .nav-toggle span {
+    background: var(--on-band);
+}
+
+/* The About page is blue: invert the corner cell so it still reads as a cell */
+body.theme-blue .about-btn {
+    background: var(--bg);
+    color: var(--ink);
+}
+
+@media (min-width: 769px) {
+    body.theme-blue .main-nav {
+        background: var(--band);     /* nav mask matches the blue page */
+    }
+}
+
+/* ===================== */
+/* ACID SWITCH           */
+/* ===================== */
+/* One control, one place, on every page: a cell of its own in the bottom-right
+   corner of the first screen, under the ABOUT cell at the top of the same
+   column. It stays in the page's own colourway — BLU glyph on the GRIGIO
+   ground — instead of riding a filled band, and is sized a cell less the 1px
+   grid line, as every block on this grid is.
+
+   No active-state box: flipping the colourway repaints the whole page, which
+   says which mode is on far more plainly than a mark on the control would.
+   aria-pressed still carries the state for anyone who can't see the colours. */
+.theme-switch {
+    position: absolute;
+    right: 0;
+    /* The last WHOLE row of the first screen. On the home the rows divide the
+       viewport height exactly, so the fallback is already on the line; the
+       section pages have a square module with a remainder at the bottom, so
+       site.js measures that row and publishes it. */
+    top: var(--screen-last-row, calc(100dvh - var(--grid-row)));
+    width: calc(var(--grid-col) - 1px);
+    height: calc(var(--grid-row) - 1px);
+    z-index: 3;             /* above the media layer (1) and the statement (2) */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    /* Mercury (☿) — quicksilver, the alchemical agent of transformation. Named
+       symbol fonts first so it stays a text glyph and never turns into a
+       colour emoji, which would break the monochrome palette. */
+    font-family: 'Apple Symbols', 'Segoe UI Symbol', 'Noto Sans Symbols2', var(--font-menu);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.theme-switch:hover {
+    opacity: 0.7;
+}
+
+/* Nav entries with no page yet (Workshops, Talks) — shown, but not links.
+   Set in the same BLU as the links so the menu reads as one row of five. */
+.main-nav .nav-off {
+    font-family: var(--font-menu);
+    font-size: 14px;
+    line-height: 17px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+    cursor: default;
+}
+
+@media (max-width: 768px) {
+    .js .main-nav .nav-off {
+        font-size: 22px;
+        line-height: 1.2;
+    }
+}
+
+/* The home mark is a flat blue image, not an inline SVG like the one on the
+   section pages, so acid mode reaches it through a hue rotation: BLU (242°)
+   swung round to the acid green (110°), then lifted to match its brightness. */
+:root[data-theme="acid"] .brand img {
+    filter: hue-rotate(228deg) brightness(4.2) saturate(0.6);
+}

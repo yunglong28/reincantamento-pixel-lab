@@ -49,3 +49,14 @@ python3 tools/build_icons.py --sheet   # src/icons.js + build/compare.png (v1 gr
 ```
 
 `tools/icons-v1.json` holds the original icons. Brand corrections and per-icon overrides live in `tools/build_icons.py`. If you edit icons in the lab, export the JSON and either replace `tools/icons-v1.json` with it or re-import it into the lab.
+
+## Home page with glyphs (`home/`)
+
+`home/index.html` is a copy of the reincantamento-site homepage with one extra layer added, `home/assets/js/glyphs.js`. The pixel-lab icons, read from `src/icons.js`, appear inside the empty squares of the grid on a clock at 104 BPM, counted in sixteenths.
+
+- **How the rhythm works.** Every two bars the clock picks a new pattern. It can be a euclidean pulse, a sweep along a row, an echo in the cell rotated 180°, a cluster, or almost nothing. Some beats are dropped and some ghost notes are added, so the rhythm doesn't settle into a loop.
+- **How a glyph lives.** Each one builds up pixel by pixel, holds, then either dissolves or turns into another icon. Some appear inside a filled band-coloured square.
+- **What it adapts to.** It reads the colour tokens, so acid mode works too. It also respects `prefers-reduced-motion` and pauses when the tab is hidden.
+- **Where the links go.** The menu links point at the live site, because only the homepage was copied here.
+
+To preview it, run `python3 -m http.server` from the repo root and open `/home/index.html`. `home/` loads `../src/icons.js`, so any change made in the lab and rebuilt with `build_icons.py` reaches the home page too.
