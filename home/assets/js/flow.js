@@ -12,8 +12,16 @@
    way they do on the calm home: euclidean pulses, sweeps along a row, a twin in
    the cell rotated 180°, clusters and hushes, built pixel by pixel in scatter,
    scan, rain or bloom order, some inside a filled square.
-   No symbol is on screen twice, except an echo and its rotated twin. Decorative only: aria-hidden canvas, no pointer
-   events, still frame under prefers-reduced-motion, paused while hidden. */
+   No symbol is on screen twice, except an echo and its rotated twin.
+
+   Timing: every journey lasts a whole number of beats and leaves on a beat, so
+   ribbons and drifters land on the pulse. The piece breathes over sixteen
+   bars (density rises and falls), and every so often the holding glyphs leave
+   together, bending the same way, before a bar of near-silence. It opens on
+   the brand eye and its rotated twin.
+
+   Decorative only: aria-hidden canvas, no pointer events, still frame under
+   prefers-reduced-motion, paused while hidden or scrolled out of view. */
 (() => {
     'use strict';
 
@@ -29,6 +37,7 @@
     const SIXTEENTH = 60000 / M.bpm / 4;
     const FILL = M.fill;                     // share of free squares holding a glyph
     const MAX_DRIFTERS = 2;
+    const MAX_MIGRATIONS = 3;                // ribbons in flight at once, outside a flock
     const root = document.documentElement;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const rnd = n => Math.floor(Math.random() * n);
@@ -45,6 +54,8 @@
         const id = icons.push(rows.map(r => [...r].map(c => c === 'X'))) - 1;
         for (let i = 0; i < (set === 'brand' ? M.brand : 1); i++) pool.push(id);
     }
+    const brandId = name => { let i = 0; for (const set in ICONS) for (const n in ICONS[set]) { const r = ICONS[set][n]; if (r.length > 18 || r[0].length > 18) continue; if (set === 'brand' && n === name) return i; i++; } return -1; };
+    const EYE = brandId('occhio');
     const rot180 = g => g.slice().reverse().map(r => r.slice().reverse());
     const pixelsOf = g => { const p = []; g.forEach((row, y) => row.forEach((v, x) => { if (v) p.push([x, y]); })); return p; };
     const scan = px => px.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
@@ -65,7 +76,7 @@
     const ctx = cv.getContext('2d');
 
     let colW = 90, rowH = 90, cols = 0, rows = 0, W = 0, H = 0, dpr = 1, P = 4;
-    let free = [], freeSet = new Set();
+    let free = [], freeSet = new Set(), blocks = [];
     const key = (c, r) => c + ',' + r;
     const css = n => getComputedStyle(root).getPropertyValue(n).trim();
     let ink = '#0009ff', bg = '#d9d9d9', line = '#ffffff', band = '#0009ff', onBand = '#ffffff';
@@ -92,7 +103,7 @@
         dpr = Math.min(2, window.devicePixelRatio || 1);
         cv.style.height = H + 'px';
         cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-        const blocks = ['.statement', '.site-header', '.media-cell', '.theme-switch']
+        blocks = ['.statement', '.site-header', '.media-cell', '.theme-switch']
             .map(s => document.querySelector(s)).filter(Boolean)
             .map(el => el.getBoundingClientRect())
             .map(b => ({ l: b.left, t: b.top + window.scrollY, r: b.right, b: b.bottom + window.scrollY }));
@@ -153,22 +164,29 @@
         const l = Math.hypot(tx, ty) || 1; return [tx / l, ty / l];
     }
 
-    // src: list of absolute pixel positions [x,y] (screen px, top-left of each pixel) and the point they leave from
-    function migrate(src, from, toCell, toId, now) {
+    // src: absolute pixel positions [x,y] (screen px, top-left of each pixel) and the point they leave from.
+    // The pixels nearest the destination peel off first and head for the far side of the target, so the
+    // ribbon reads as one body travelling; the journey lasts a whole number of beats and lands on one.
+    const BEAT = SIXTEENTH * 4;
+    function migrate(src, from, toCell, toId, t0, opts = {}) {
         const [c, r] = toCell, g = icons[toId], p = pxFor(g);
-        const dstPx = scan(pixelsOf(g));
         const ox = Math.round(c * colW + (colW - g[0].length * p) / 2), oy = Math.round(r * rowH + (rowH - g.length * p) / 2);
         const to = cellCentre(c, r);
-        const dx = to[0] - from[0], dy = to[1] - from[1], dist = Math.hypot(dx, dy) || 1;
-        const nx = -dy / dist, ny = dx / dist, bend = dist * rand(0.35, 0.7) * (chance(0.5) ? 1 : -1);
+        const dx = to[0] - from[0], dy = to[1] - from[1], dist = Math.hypot(dx, dy) || 1, ux = dx / dist, uy = dy / dist;
+        const proj = ([x, y]) => x * ux + y * uy;
+        src = src.slice().sort((a, b) => proj(b) - proj(a));
+        const dstPx = pixelsOf(g).sort((a, b) => proj(b) - proj(a));
+        const nx = -uy, ny = ux, sign = opts.sign || (chance(0.5) ? 1 : -1), bend = dist * rand(0.35, 0.7) * sign;
+        const beats = opts.beats || Math.max(2, Math.round((2400 + dist * 2.2) / BEAT));
         const m = {
             p0: from, p3: to,
             p1: [from[0] + dx * 0.33 + nx * bend, from[1] + dy * 0.33 + ny * bend],
             p2: [from[0] + dx * 0.66 - nx * bend * rand(0.6, 1.2), from[1] + dy * 0.66 - ny * bend * rand(0.6, 1.2)],
-            start: now, dur: 2600 + dist * 2.2, spread: 0.4,
+            start: t0, dur: beats * BEAT, spread: 0.45,
             src: src.map(([x, y]) => [x - from[0], y - from[1]]),
             dst: dstPx.map(([x, y]) => [ox + x * p - to[0], oy + y * p - to[1]]),
             p, toCell, toId, dstPx, wob: rand(1.2, 2.4), amp: Math.min(colW, rowH) * rand(0.15, 0.3),
+            head: [from[0], from[1]], vel: [0, 0],
         };
         reserved.add(key(c, r));
         migrations.push(m);
@@ -180,81 +198,112 @@
         if (gl.shown >= gl.px.length) gl.phase = 'hold';
     }
 
+    const easeInOut = u => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
     function migrationPixels(m, now, out) {
         const tau = (now - m.start) / m.dur;
         const n = Math.max(m.src.length, m.dst.length), pair = Math.min(m.src.length, m.dst.length);
-        for (let i = 0; i < n; i++) {
-            if (i >= m.src.length) continue;                         // extra target pixels arrive once landed
-            const u = ease(clamp01((tau - (i / n) * m.spread) / (1 - m.spread)));
+        for (let i = 0; i < m.src.length; i++) {
+            const k = i / Math.max(1, m.src.length - 1);
+            const delay = Math.pow(k, 1.6) * m.spread;                 // a dense head, a long thin tail
+            const u = easeInOut(clamp01((tau - delay) / (1 - m.spread)));
             const [bx, by] = bez(m, u), [tx, ty] = bezT(m, u);
-            const cohesion = 1 - 0.85 * Math.sin(Math.PI * u);
+            const mid = Math.sin(Math.PI * u);
+            const cohesion = 1 - 0.85 * mid;
             const so = m.src[i], d = m.dst[i < pair ? i : pair - 1] || [0, 0];
             const offx = (so[0] * (1 - u) + d[0] * u) * cohesion, offy = (so[1] * (1 - u) + d[1] * u) * cohesion;
-            const w = m.amp * Math.sin(Math.PI * u) * Math.sin(2 * Math.PI * (u * m.wob) + i * 0.25);
-            const alpha = i >= pair ? 1 - u : 1;                      // surplus source pixels thin out on the way
-            out.push([bx + offx - ty * w, by + offy + tx * w, alpha, m.p]);
+            const w = m.amp * mid * Math.sin(2 * Math.PI * (u * m.wob) + i * 0.25);
+            // the tail thins out in flight by dropping pixels, never by fading them: pixel art stays opaque
+            const keep = (i >= pair ? 1 - u : 1) * (1 - 0.65 * mid * k);
+            if (((i * 0.618034) % 1) < keep) out.push([bx + offx - ty * w, by + offy + tx * w, 1, m.p]);
+            if (i === 0) { m.vel = [bx - m.head[0], by - m.head[1]]; m.head = [bx, by]; }
         }
+        void n;
         return tau >= 1;
     }
 
-    // ---- drifters: Lissajous paths across the whole first screen
+    // ---- drifters: steered through the margins on a smooth field, around the statement
+    const field = (x, y, t) => Math.sin(x * 0.0041 + t * 0.00011) + Math.sin(y * 0.0053 - t * 0.00009) + Math.sin((x - y) * 0.0027 + t * 0.00007);
+    const angDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
     function lift(gl, now) {
         settled.delete(key(gl.c, gl.r));
-        const [x0, y0] = cellCentre(gl.c, gl.r);
-        const cx = W / 2, cy = H / 2, ax = W * 0.44, ay = H * 0.38;
-        const s = v => Math.max(-1, Math.min(1, v));
-        const d = {
-            id: gl.id, g: gl.g, px: pixelsOf(gl.g), p: pxFor(gl.g),
-            cx, cy, ax, ay, wx: rand(0.05, 0.09) * 2 * Math.PI / 1000, wy: rand(0.06, 0.11) * 2 * Math.PI / 1000,
-            fx: 0, fy: 0, t0: now, life: rand(14000, 24000), x: x0, y: y0,
-        };
-        d.fx = chance(0.5) ? Math.asin(s((x0 - cx) / ax)) : Math.PI - Math.asin(s((x0 - cx) / ax));
-        d.fy = chance(0.5) ? Math.asin(s((y0 - cy) / ay)) : Math.PI - Math.asin(s((y0 - cy) / ay));
-        drifters.push(d);
+        const [x, y] = cellCentre(gl.c, gl.r);
+        drifters.push({ id: gl.id, g: gl.g, px: pixelsOf(gl.g), p: pxFor(gl.g), x, y, th: rand(0, 2 * Math.PI), v: rand(0.045, 0.075), t0: now, life: Math.round(rand(14000, 24000) / BEAT) * BEAT, vel: [0, 0], last: now });
     }
     function moveDrifter(d, now) {
-        const t = now - d.t0;
-        d.x = d.cx + d.ax * Math.sin(d.wx * t + d.fx) + colW * 0.3 * Math.sin(d.wy * 2.3 * t);
-        d.y = d.cy + d.ay * Math.sin(d.wy * t + d.fy) + rowH * 0.3 * Math.sin(d.wx * 1.7 * t + 1);
+        const dt = Math.min(64, now - d.last); d.last = now;
+        let target = field(d.x, d.y, now) * Math.PI;
+        const m = Math.min(colW, rowH) * 0.7;
+        for (const b of blocks) {                                     // keep out of the statement and the header
+            const qx = Math.max(b.l, Math.min(d.x, b.r)), qy = Math.max(b.t, Math.min(d.y, b.b));
+            const ex = d.x - qx, ey = d.y - qy, dd = Math.hypot(ex, ey);
+            if (dd < m) { target = dd > 0.5 ? Math.atan2(ey, ex) : Math.atan2(d.y - (b.t + b.b) / 2, d.x - (b.l + b.r) / 2); break; }
+        }
+        if (d.x < m || d.x > W - m || d.y < rowH + m * 0.5 || d.y > H - m * 0.5) target = Math.atan2(H / 2 - d.y, W / 2 - d.x);
+        d.th += Math.max(-0.0028 * dt, Math.min(0.0028 * dt, angDiff(target, d.th)));
+        const vx = Math.cos(d.th) * d.v * dt, vy = Math.sin(d.th) * d.v * dt;
+        d.x += vx; d.y += vy; d.vel = [vx, vy];
     }
     function drifterPixels(d) {
         const ox = Math.round(d.x - d.g[0].length * d.p / 2), oy = Math.round(d.y - d.g.length * d.p / 2);
         return d.px.map(([x, y]) => [ox + x * d.p, oy + y * d.p]);
     }
-    function landDrifter(d, now) {
+    function landDrifter(d, t0) {
         const e = emptyCells(); if (!e.length) return false;
         let best = e[0], bd = Infinity;
         for (const cell of e) { const [x, y] = cellCentre(...cell), dd = Math.hypot(x - d.x, y - d.y); if (dd < bd) { bd = dd; best = cell; } }
         drifters.splice(drifters.indexOf(d), 1);
-        migrate(drifterPixels(d), [d.x, d.y], best, d.id, now);
+        migrate(drifterPixels(d), [d.x, d.y], best, d.id, t0, { beats: 2 });
         return true;
     }
 
-    // ---- the bent grid: around a point, erase the straight lines and redraw them pushed outward
-    function lens(cx, cy, strength) {
-        const R = 2.6 * Math.max(colW, rowH), R0 = 1.15 * Math.max(colW, rowH), A = 0.32 * Math.min(colW, rowH) * strength, step = 5;
-        const field = (x, y) => {
-            const dx = x - cx, dy = y - cy, r = Math.hypot(dx, dy) + 1e-3, f = Math.exp(-(r / R0) * (r / R0));
-            return [x + dx / r * A * f, y + dy / r * A * f, f];
+    // ---- the bent grid. Every source (a drifter, a ribbon's head) pushes the lines outward and drags
+    // them along its motion. One pass sums all sources; the painted straight line is covered with the
+    // ground and redrawn bent, at full strength, so lines stay crisp 1px and only their geometry changes.
+    function bendGrid(sources) {
+        if (!sources.length) return;
+        const S = Math.max(colW, rowH), R0 = 1.1 * S, R = 2.6 * R0, step = 4;
+        const disp = (x, y) => {
+            let ox = 0, oy = 0;
+            for (const s of sources) {
+                const dx = x - s.x, dy = y - s.y, r2 = dx * dx + dy * dy;
+                if (r2 > R * R) continue;
+                const r = Math.sqrt(r2) + 1e-3, f = Math.exp(-r2 / (R0 * R0)) * s.k;
+                ox += (dx / r * 0.22 * S + s.vx * 0.5 * S) * f;
+                oy += (dy / r * 0.22 * S + s.vy * 0.5 * S) * f;
+            }
+            return [ox, oy];
         };
-        const segs = (x0, y0, x1, y1, vertical) => {
-            const len = Math.hypot(x1 - x0, y1 - y0), n = Math.ceil(len / step);
-            let prev = field(x0, y0);
-            for (let i = 1; i <= n; i++) {
-                const t = i / n, x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t, cur = field(x, y);
-                const a = Math.min(1, cur[2] * 2.2 * strength);
-                if (a > 0.02) {
-                    ctx.globalAlpha = a; ctx.fillStyle = bg;           // hide the painted straight line here
-                    if (vertical) ctx.fillRect(x0 - 0.5, y - step, 2, step + 0.5); else ctx.fillRect(x - step, y0 - 0.5, step + 0.5, 2);
-                    ctx.strokeStyle = line; ctx.lineWidth = 1;         // and draw it bent
-                    ctx.beginPath(); ctx.moveTo(prev[0] + 0.5, prev[1] + 0.5); ctx.lineTo(cur[0] + 0.5, cur[1] + 0.5); ctx.stroke();
+        ctx.fillStyle = bg; ctx.strokeStyle = line; ctx.lineWidth = 1;
+        const path = new Path2D();
+        const run = (vertical, k) => {
+            const fixed = vertical ? k * colW : k * rowH;
+            let lo = Infinity, hi = -Infinity;
+            for (const s of sources) {
+                const near = vertical ? Math.abs(s.x - fixed) : Math.abs(s.y - fixed);
+                if (near > R) continue;
+                const along = vertical ? s.y : s.x;
+                lo = Math.min(lo, along - R); hi = Math.max(hi, along + R);
+            }
+            if (lo > hi) return;
+            lo = Math.max(0, lo); hi = Math.min(vertical ? H : W, hi);
+            let started = false, a0 = null, a1 = null;
+            for (let t = lo; t <= hi + 0.01; t += step) {
+                const x = vertical ? fixed : t, y = vertical ? t : fixed, [ox, oy] = disp(x, y);
+                const moved = Math.abs(ox) + Math.abs(oy) > 0.25;
+                if (moved) { if (a0 === null) a0 = t; a1 = t; }
+                if (moved || started) {
+                    if (!started) { path.moveTo(x + 0.5, y + 0.5); started = true; }
+                    else path.lineTo(x + ox + 0.5, y + oy + 0.5);
+                    if (!moved) started = false;
                 }
-                prev = cur;
+            }
+            if (a0 !== null) {                                       // cover the straight line where it moved
+                if (vertical) ctx.fillRect(fixed - 0.5, a0 - step, 2, a1 - a0 + 2 * step); else ctx.fillRect(a0 - step, fixed - 0.5, a1 - a0 + 2 * step, 2);
             }
         };
-        for (let k = Math.max(0, Math.floor((cx - R) / colW)); k * colW <= Math.min(W, cx + R); k++) segs(k * colW, Math.max(0, cy - R), k * colW, Math.min(H, cy + R), true);
-        for (let k = Math.max(0, Math.floor((cy - R) / rowH)); k * rowH <= Math.min(H, cy + R); k++) segs(Math.max(0, cx - R), k * rowH, Math.min(W, cx + R), k * rowH, false);
-        ctx.globalAlpha = 1;
+        for (let k = 0; k <= cols; k++) run(true, k);
+        for (let k = 1; k <= rows; k++) run(false, k);
+        ctx.stroke(path);
     }
 
     // ---- the calm home's figures (merge): each returns step -> [col, row, opts] requests
@@ -267,10 +316,13 @@
             const every = [2, 3][rnd(2)];
             return s => (s % every === 0 && ln[s / every] ? [[...ln[s / every], { order: 'scan', hold: 8 + rnd(12) }]] : []);
         },
-        echo() {
+        echo(forced) {
             return s => {
                 if (s % 8 !== 0) return [];
-                const a = freeCell(), id = pickId(); if (!a || id == null) return [];
+                const twin = ([c, r]) => [cols - 1 - c, rows - r];
+                const pairs = emptyCells().filter(cell => { const t = twin(cell); return freeSet.has(key(...t)) && !settled.has(key(...t)) && key(...t) !== key(...cell); });
+                const a = pairs.length ? pairs[rnd(pairs.length)] : null;
+                const id = forced != null && s === 0 ? forced : pickId(); if (!a || id == null) return [];
                 return [[...a, { id }], [cols - 1 - a[0], rows - a[1], { id, flip: true, delay: 3 }]];
             };
         },
@@ -292,9 +344,12 @@
         return FIGURES.pulse();
     };
     let figure = null, pending = [];
+    // the piece breathes over sixteen bars: density rises and falls around FILL
+    const breath = () => 0.5 - 0.5 * Math.cos(2 * Math.PI * (sixteenth / 32) / 8);
+    const capacity = () => Math.max(3, Math.round(free.length * FILL * (0.5 + 0.9 * breath())));
     function request(c, r, o = {}) {
         if (!freeSet.has(key(c, r)) || settled.has(key(c, r)) || reserved.has(key(c, r))) return;
-        if (settled.size + migrations.length >= Math.max(3, Math.round(free.length * FILL))) return;
+        if (settled.size + migrations.length >= capacity()) return;
         const id = o.id ?? pickId(); if (id == null) return;
         settle(c, r, id, o);
     }
@@ -302,16 +357,46 @@
     // ---- rhythm
     const euclid = (k, n) => { const o = []; for (let i = 0; i < n; i++) o.push(Math.floor((i + 1) * k / n) - Math.floor(i * k / n)); return o; };
     let sixteenth = 0, pattern = euclid(3, 8), nextBeat = 0;
+    let hushNext = false;
+    function flock(t0) {
+        // the holding glyphs leave together, all bending the same way, landing on the same downbeat
+        const holding = [...settled.values()].filter(g => g.phase === 'hold').slice(0, 7);
+        if (holding.length < 3) return false;
+        // a vortex: each glyph heads for the square nearest its own position turned ~110° about the centre
+        const sign = chance(0.5) ? 1 : -1, turn = sign * rand(1.6, 2.2), cx = W / 2, cy = H / 2;
+        for (const gl of holding) {
+            const [x, y] = cellCentre(gl.c, gl.r), a = Math.atan2(y - cy, x - cx) + turn, rad = Math.hypot(x - cx, y - cy);
+            const tx = cx + Math.cos(a) * rad, ty = cy + Math.sin(a) * rad;
+            const e = emptyCells(), id = pickId(gl.id);
+            if (!e.length || id == null) continue;
+            let best = e[0], bd = Infinity;
+            for (const cell of e) { const [qx, qy] = cellCentre(...cell), d = Math.hypot(qx - tx, qy - ty); if (d < bd) { bd = d; best = cell; } }
+            depart(gl, best, id, t0, { sign, beats: 8 });
+        }
+        return true;
+    }
+    function depart(gl, cell, id, t0, opts) {
+        const p = pxFor(gl.g), ox = Math.round(gl.c * colW + (colW - gl.g[0].length * p) / 2), oy = Math.round(gl.r * rowH + (rowH - gl.g.length * p) / 2);
+        const src = gl.px.slice(0, gl.shown).map(([x, y]) => [ox + x * p, oy + y * p]);
+        settled.delete(key(gl.c, gl.r));
+        migrate(src, cellCentre(gl.c, gl.r), cell, id, t0, opts);
+    }
+
     function onSixteenth(now) {
-        const s = sixteenth % 32;
+        const s = sixteenth % 32, phrase = Math.floor(sixteenth / 32);
         if (s === 0) pattern = euclid([2, 3, 5][rnd(3)], [8, 8, 16][rnd(3)]);
         for (const gl of [...settled.values()]) stepSettled(gl);
 
-        const target = Math.max(3, Math.round(free.length * FILL));
+        const target = capacity();
         if (M.figures) {
-            if (s === 0) figure = nextFigure();
+            if (s === 0) {
+                if (phrase === 0 && EYE >= 0) figure = FIGURES.echo(EYE);               // open on the eye and its twin
+                else if (hushNext) { figure = FIGURES.hush(); hushNext = false; }
+                else if (phrase % 10 === 9 && flock(now)) { figure = FIGURES.hush(); hushNext = true; }
+                else figure = nextFigure();
+            }
             let hits = figure(s).filter(Boolean).map(h => (h.length === 2 ? [...h, {}] : h));
-            if (hits.length && chance(0.12)) hits = [];                                   // a dropped beat
+            if (hits.length && sixteenth > 8 && chance(0.12)) hits = [];                 // a dropped beat (never the opening)
             if (!hits.length && s % 2 === 1 && chance(0.04)) { const f = freeCell(); if (f) hits = [[...f, {}]]; }   // a ghost note
             for (const [c, r, o] of hits) { if (o.delay) pending.push([sixteenth + o.delay, c, r, o]); else request(c, r, o); }
             pending = pending.filter(p => { if (p[0] > sixteenth) return true; request(p[1], p[2], p[3]); return false; });
@@ -323,18 +408,16 @@
         if (s % 4 === 0) {
             for (const gl of [...settled.values()]) {
                 if (gl.phase !== 'leave') continue;
-                if (!chance(M.leave)) { gl.phase = 'out'; continue; }
+                if (!chance(M.leave * (0.6 + 0.6 * breath()))) { gl.phase = 'out'; continue; }
                 if (drifters.length < MAX_DRIFTERS && chance(0.3)) { lift(gl, now); continue; }
+                if (migrations.length >= MAX_MIGRATIONS) { gl.phase = 'out'; continue; }
                 const e = emptyCells().filter(([c, r]) => { const d = Math.hypot(c - gl.c, r - gl.r); return d >= 3 && d <= 9; });
                 const id = pickId(gl.id);
                 if (!e.length || id == null) { gl.phase = 'out'; continue; }
-                const p = pxFor(gl.g), ox = Math.round(gl.c * colW + (colW - gl.g[0].length * p) / 2), oy = Math.round(gl.r * rowH + (rowH - gl.g.length * p) / 2);
-                const src = scan(gl.px.slice(0, gl.shown)).map(([x, y]) => [ox + x * p, oy + y * p]);
-                settled.delete(key(gl.c, gl.r));
-                migrate(src, cellCentre(gl.c, gl.r), e[rnd(e.length)], id, now);
+                depart(gl, e[rnd(e.length)], id, now);
             }
         }
-        for (const d of [...drifters]) if (now - d.t0 > d.life) landDrifter(d, now);
+        if (s % 4 === 0) for (const d of [...drifters]) if (now - d.t0 >= d.life) landDrifter(d, now);
         sixteenth++;
     }
 
@@ -347,25 +430,34 @@
         } else ctx.fillStyle = ink;
         for (let i = 0; i < gl.shown; i++) { const [x, y] = gl.px[i]; ctx.fillRect(ox + x * p, oy + y * p, p, p); }
     }
+    let painted = false;
     function frame(now) {
         if (!nextBeat) nextBeat = now;
-        let n = 0; while (now >= nextBeat && n++ < 8) { onSixteenth(now); nextBeat += SIXTEENTH; }
+        let n = 0, ticked = false;
+        while (now >= nextBeat && n++ < 8) { onSixteenth(nextBeat); nextBeat += SIXTEENTH; ticked = true; }   // events carry their beat's time
         if (now - nextBeat > 1000) nextBeat = now;
+        if (!ticked && !drifters.length && !migrations.length && painted) return;   // nothing moves between beats
 
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, W, H);
-        for (const d of drifters) { moveDrifter(d, now); lens(d.x, d.y, 1); }
-        const flying = [];
+        const sources = [], flying = [];
+        for (const d of drifters) {
+            moveDrifter(d, now);
+            const sp = Math.hypot(...d.vel) || 1;
+            sources.push({ x: d.x, y: d.y, k: 1, vx: d.vel[0] / sp, vy: d.vel[1] / sp });
+        }
         for (let i = migrations.length - 1; i >= 0; i--) {
             const m = migrations[i];
-            if (migrationPixels(m, now, flying)) { migrations.splice(i, 1); finishMigration(m); }
-            else { const u = ease(clamp01((now - m.start) / m.dur)); const [x, y] = bez(m, u); lens(x, y, 0.45 * Math.sin(Math.PI * u)); }
+            if (migrationPixels(m, now, flying)) { migrations.splice(i, 1); finishMigration(m); continue; }
+            const u = clamp01((now - m.start) / m.dur), sp = Math.hypot(...m.vel) || 1;
+            sources.push({ x: m.head[0], y: m.head[1], k: 0.3 * Math.sin(Math.PI * u), vx: m.vel[0] / sp, vy: m.vel[1] / sp });
         }
+        bendGrid(sources);
         for (const gl of settled.values()) drawGlyphAt(gl);
         ctx.fillStyle = ink;
-        for (const [x, y, a, p] of flying) { ctx.globalAlpha = a; ctx.fillRect(Math.round(x), Math.round(y), p, p); }
-        ctx.globalAlpha = 1;
+        for (const [x, y, , p] of flying) ctx.fillRect(Math.round(x), Math.round(y), p, p);
         for (const d of drifters) for (const [x, y] of drifterPixels(d)) ctx.fillRect(x, y, d.p, d.p);
+        painted = true;
     }
 
     // requestAnimationFrame, with a timeout fallback where frames never come (background tabs aside)
@@ -393,13 +485,16 @@
     let queued = false;
     const refit = () => {
         if (queued) return; queued = true;
-        requestAnimationFrame(() => requestAnimationFrame(() => { queued = false; measure(); if (reduced) still(); }));
+        requestAnimationFrame(() => requestAnimationFrame(() => { queued = false; measure(); painted = false; if (reduced) still(); }));
     };
 
     readColours(); measure();
     if (reduced) still(); else start();
     window.addEventListener('resize', refit);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
-    new MutationObserver(() => { readColours(); if (reduced) still(); }).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
-    document.addEventListener('visibilitychange', () => { if (!reduced) (document.hidden ? stop() : start()); });
+    new MutationObserver(() => { readColours(); painted = false; if (reduced) still(); }).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+    let onScreen = true;
+    const sync = () => { if (reduced) return; (document.hidden || !onScreen) ? stop() : start(); };
+    document.addEventListener('visibilitychange', sync);
+    if ('IntersectionObserver' in window) new IntersectionObserver(([e]) => { onScreen = e.isIntersecting; sync(); }).observe(cv);
 })();

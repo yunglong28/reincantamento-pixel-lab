@@ -80,4 +80,20 @@ python3 tools/build_icons.py --sheet   # src/icons.js + build/compare.png (v1 gr
 - **Leaving.** Glyphs then leave the flow way, as migrating ribbons or as drifters that bend the grid.
 - **Repeats.** The only time a symbol appears twice is an echo and its twin.
 
+Craft notes on merge and flow. These are the choices behind the current version:
+
+- **Timing.** Every journey lasts a whole number of beats and leaves on a beat, so ribbons and drifters land on the pulse.
+- **Ribbons.**
+  - Ribbons peel off from the side facing their destination.
+  - Each ribbon has a dense head and a long tail.
+  - The tail thins by dropping pixels rather than fading them, so the pixel art stays opaque.
+  - At most three ribbons fly at once outside a flock.
+- **The bent grid.** It is one pass over every source of movement, and it changes geometry only: the lines stay crisp at 1px, are pushed outward and are dragged along the direction of motion.
+- **Drifters.** They are steered through the margins on a smooth field and kept away from the statement and the header.
+- **Form.**
+  - Density breathes over sixteen bars.
+  - Every ten phrases the holding glyphs leave together as a vortex. Each one turns about 110° around the centre, and the bar after is a hush.
+  - The piece opens on the eye and its rotated twin.
+- **Cost.** Nothing is redrawn between beats when nothing moves, and the animation stops when the tab is hidden or the home is scrolled out of view.
+
 To preview it, run `python3 -m http.server` from the repo root and open `/home/index.html`. `home/` loads `../src/icons.js`, so any change made in the lab and rebuilt with `build_icons.py` reaches the home page too.
