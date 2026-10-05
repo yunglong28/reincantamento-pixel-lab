@@ -82,6 +82,19 @@ python3 tools/build_icons.py --sheet   # src/icons.js + build/compare.png (v1 gr
 - **Which symbols.** Merge leaves out the eye, the drops (the `brand` and `drops` sets, plus #36, acephale-drop and weeping-eye), the pin and the bonfire, and the filled squares. No symbol is ever on screen twice, not even in the echo, whose answer is a different symbol. Every symbol is ink on the ground, blue on grey, and the opening is a random symbol with its twin.
 - **How many and how fast.** At most six symbols are on screen at once, counting settled glyphs, ribbons and drifters. The page opens with two bars of silence. The eye and its twin then build slowly, and one more symbol is allowed each phrase, up to the cap.
 
+`home/random.html` (`data-mode="random"`) keeps merge's rules as hard limits and draws every other decision at random.
+
+- **Hard limits.** These are never broken:
+  - the tempo is 96 BPM and every event lands on a sixteenth;
+  - at most six symbols are on screen, and never two of the same;
+  - the excluded symbols stay out, the colours are blue on grey, and there are no filled squares;
+  - the page opens with two bars of silence and a slow ramp.
+- **Mood.** Six slow random walks (Ornstein–Uhlenbeck, one step per beat) set density, restlessness, drift, hold length, build speed and spacing. The cap itself wanders between 2 and 6.
+- **Rhythm.** Each phrase draws a new probability for every sixteenth. Metric weight keeps it in time (downbeats more likely), and sometimes a euclidean pattern is laid over it.
+- **Gestures.** A Markov chain picks between one symbol, a pair (in a related cell), a short run in one of 8 directions, a nudge (a symbol leaves early) and a rest of random length. Its transition rows are redrawn now and then.
+- **Choices.** Cell choice, build order and hold length (log-normal) are all drawn. So is how a symbol leaves (fade, travel or drift), along with the travel distance and the number of beats.
+- **The vortex** is a rare Poisson event, about once every 90 s, followed by a silence of random length.
+
 Craft notes on merge and flow. These are the choices behind the current version:
 
 - **Timing.** Every journey lasts a whole number of beats and leaves on a beat, so ribbons and drifters land on the pulse.

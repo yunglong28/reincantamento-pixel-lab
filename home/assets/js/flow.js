@@ -31,6 +31,9 @@
     const MODES = {
         // max: symbols on screen at once (settled + ribbons + drifters); intro: silent sixteenths before the first one
         flow:  { bpm: 84, fill: 0.14, figures: false, inverse: 0, brand: 1, hold: [24, 72], leave: 0.7, max: Infinity, intro: 0 },
+        // random: merge's rules as hard limits, every other decision drawn from slowly wandering distributions
+        random: { bpm: 96, fill: 0.24, figures: false, stochastic: true, inverse: 0, brand: 0, hold: [24, 64], leave: 0.6, max: 6, intro: 32,
+                  skip: ['brand', 'drops'], skipNames: ['36-how-to-bleed', 'acephale-drop', 'weeping-eye', 'hyperlocal-pin', 'bonfire'], unique: true },
         merge: { bpm: 96, fill: 0.24, figures: true, inverse: 0, brand: 0, hold: [24, 64], leave: 0.6, max: 6, intro: 32, skip: ['brand', 'drops'], skipNames: ['36-how-to-bleed', 'acephale-drop', 'weeping-eye', 'hyperlocal-pin', 'bonfire'], unique: true },
     };
     const script = document.currentScript;
@@ -356,7 +359,9 @@
     const onScreenCount = () => settled.size + migrations.length + drifters.length;
     // a slow start: two symbols in the first phrase, one more each phrase after, up to the cap
     const ramp = () => 2 + Math.floor(Math.max(0, sixteenth) / 32);
-    const capacity = () => Math.min(M.max, ramp(), Math.max(3, Math.round(free.length * FILL * (0.5 + 0.9 * breath()))));
+    const capacity = () => Math.min(M.max, ramp(), M.stochastic
+        ? Math.max(2, Math.round(2 + mood.density.x * 4.4))                       // the cap itself wanders between 2 and 6
+        : Math.max(3, Math.round(free.length * FILL * (0.5 + 0.9 * breath()))));
     function request(c, r, o = {}) {
         if (!freeSet.has(key(c, r)) || settled.has(key(c, r)) || reserved.has(key(c, r))) return;
         if (onScreenCount() >= capacity()) return;
@@ -364,6 +369,86 @@
         if (M.unique && inUse().has(id)) return;
         const gl = settle(c, r, id, o);
         if (sixteenth < 32) gl.rate = Math.max(1, Math.ceil(gl.px.length / 16));      // the first glyphs take their time
+    }
+
+    // ---- the stochastic score (random mode). Hard rules stay in request()/capacity(); everything else is drawn.
+    const gauss = () => { let u = 0; while (!u) u = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random()); };
+    const dirichlet = n => { const w = Array.from({ length: n }, () => -Math.log(Math.random() || 1e-9)); const t = w.reduce((a, b) => a + b, 0); return w.map(x => x / t); };
+    const pickW = w => { let t = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < w.length; i++) if ((t -= w[i]) < 0) return i; return w.length - 1; };
+    const lognormal = (median, sigma) => median * Math.exp(sigma * gauss());
+
+    // mood: six Ornstein–Uhlenbeck walks, one step per beat, each pulled loosely toward its own centre
+    const mood = {
+        density:  { x: 0.5, mu: 0.6, th: 0.03, sg: 0.05 },   // how many symbols the cap allows (2..6)
+        restless: { x: 0.6, mu: 0.6, th: 0.04, sg: 0.06 },   // travel rather than fade
+        drift:    { x: 0.3, mu: 0.3, th: 0.04, sg: 0.05 },   // lift off rather than travel
+        hold:     { x: 0.5, mu: 0.5, th: 0.04, sg: 0.06 },   // how long symbols sit
+        build:    { x: 0.4, mu: 0.4, th: 0.06, sg: 0.08 },   // how slowly they build
+        spacing:  { x: 0.7, mu: 0.6, th: 0.03, sg: 0.07 },   // spread out (1) or huddle (0)
+    };
+    const walk = () => { for (const k in mood) { const m = mood[k]; m.x = clamp01(m.x + m.th * (m.mu - m.x) + m.sg * gauss()); } };
+
+    // rhythm: a probability per sixteenth, redrawn each phrase; metric weight keeps it in time
+    const metric = s => (s % 16 === 0 ? 1 : s % 4 === 0 ? 0.55 : s % 2 === 0 ? 0.3 : 0.13);
+    let mask = [], rest = 0;
+    function newMask() {
+        const exp = rand(0.6, 2.4), gain = rand(0.25, 0.75);
+        const over = chance(0.4) ? euclid([3, 5, 7][rnd(3)], 16) : null, rot = rnd(16);
+        mask = Array.from({ length: 32 }, (_, s) => Math.min(1, Math.pow(metric(s), exp) * gain + (over && over[(s + rot) % 16] ? rand(0.2, 0.45) : 0)));
+    }
+
+    // gestures: a Markov chain whose transition rows are redrawn now and then
+    const GESTURES = ['one', 'pair', 'run', 'nudge', 'rest'];
+    let chain = GESTURES.map(() => dirichlet(GESTURES.length)), lastGesture = 0;
+    const nextGesture = () => (lastGesture = pickW(chain[lastGesture]));
+
+    // where: spread out or huddle, by a power of the distance to what is already there
+    function placeCell() {
+        const e = emptyCells(); if (!e.length) return null;
+        const here = [...settled.values()].map(g => [g.c, g.r]);
+        if (!here.length) return e[rnd(e.length)];
+        const alpha = -1.5 + 4 * mood.spacing.x;
+        return e[pickW(e.map(([c, r]) => Math.pow(Math.min(...here.map(([x, y]) => Math.hypot(x - c, y - r))) + 0.5, alpha)))];
+    }
+    const relate = ([c, r]) => [[cols - 1 - c, rows - r], [cols - 1 - c, r], [c, rows - r], [c + 2, r + 1], [c - 1, r + 2]][rnd(5)];
+    const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+    const drawOpts = () => ({ order: ORDER_NAMES[rnd(ORDER_NAMES.length)], hold: Math.max(8, Math.min(120, Math.round(lognormal(16 + mood.hold.x * 48, 0.35)))) });
+
+    function gesture(now) {
+        const g = GESTURES[nextGesture()];
+        if (g === 'rest') { rest = 4 * (1 + Math.floor(-Math.log(Math.random() || 1e-9) * 1.5)); return; }
+        if (g === 'nudge') {                                                     // someone leaves early
+            const h = [...settled.values()].filter(x => x.phase === 'hold'); if (h.length) h[rnd(h.length)].phase = 'leave';
+            return;
+        }
+        const a = placeCell(); if (!a) return;
+        if (g === 'one') { request(...a, drawOpts()); return; }
+        if (g === 'pair') { request(...a, drawOpts()); pending.push([sixteenth + 1 + rnd(4), ...relate(a), drawOpts()]); return; }
+        const [dx, dy] = DIRS[rnd(8)], n = 2 + rnd(3), every = 1 + rnd(3);   // a short run in a random direction
+        for (let i = 0; i < n; i++) pending.push([sixteenth + i * every, a[0] + dx * i, a[1] + dy * i, drawOpts()]);
+    }
+
+    function leaveStochastic(gl, now) {
+        if (!chance(0.25 + 0.7 * mood.restless.x)) { gl.phase = 'out'; return; }
+        if (drifters.length < MAX_DRIFTERS && chance(0.15 + 0.5 * mood.drift.x)) { lift(gl, now); return; }
+        if (migrations.length >= MAX_MIGRATIONS) { gl.phase = 'out'; return; }
+        const want = Math.min(10, 2 + -Math.log(Math.random() || 1e-9) * 3.5), id = pickId(gl.id);
+        const e = emptyCells().filter(([c, r]) => Math.hypot(c - gl.c, r - gl.r) >= 2); if (!e.length || id == null) { gl.phase = 'out'; return; }
+        const cell = e[pickW(e.map(([c, r]) => Math.exp(-Math.abs(Math.hypot(c - gl.c, r - gl.r) - want))))];
+        depart(gl, cell, id, now, { beats: Math.max(2, Math.min(9, Math.round(lognormal(2 + Math.hypot(cell[0] - gl.c, cell[1] - gl.r) * 0.6, 0.25)))) });
+    }
+
+    function stochasticStep(s, now) {
+        if (s % 4 === 0) walk();
+        if (s === 0) { newMask(); if (chance(0.3)) chain[rnd(GESTURES.length)] = dirichlet(GESTURES.length); }
+        // a rare vortex, a Poisson event (~once every 90s), then a silence of random length
+        if (s % 16 === 0 && sixteenth > 64 && chance(BEAT * 4 / 90000) && flock(now)) { rest = 8 + rnd(24); return; }
+        if (rest > 0) rest--;
+        else if (chance(mask[s] * (0.35 + 0.9 * mood.density.x))) gesture(now);
+        pending = pending.filter(p => { if (p[0] > sixteenth) return true; request(p[1], p[2], p[3]); return false; });
+        // departures land on the beat, or now and then on an eighth
+        if (s % 4 === 0 || (s % 2 === 0 && chance(0.2))) for (const gl of [...settled.values()]) if (gl.phase === 'leave') leaveStochastic(gl, now);
+        if (sixteenth >= 32) for (const gl of settled.values()) if (gl.phase === 'in' && gl.shown === 0) gl.rate = Math.max(1, Math.ceil(gl.px.length / (2 + mood.build.x * 12)));
     }
 
     // ---- rhythm
@@ -401,6 +486,12 @@
         for (const gl of [...settled.values()]) stepSettled(gl);
 
         const target = capacity();
+        if (M.stochastic) {
+            stochasticStep(s, now);
+            for (const d of [...drifters]) if (s % 4 === 0 && now - d.t0 >= d.life) landDrifter(d, now);
+            sixteenth++;
+            return;
+        }
         if (M.figures) {
             if (s === 0) {
                 if (phrase === 0) figure = FIGURES.echo(EYE >= 0 ? EYE : null);         // open on a symbol and its twin (the eye, where allowed)
