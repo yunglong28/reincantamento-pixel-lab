@@ -31,7 +31,7 @@
     const MODES = {
         // max: symbols on screen at once (settled + ribbons + drifters); intro: silent sixteenths before the first one
         flow:  { bpm: 84, fill: 0.14, figures: false, inverse: 0, brand: 1, hold: [24, 72], leave: 0.7, max: Infinity, intro: 0 },
-        merge: { bpm: 96, fill: 0.24, figures: true, inverse: 0.12, brand: 3, hold: [24, 64], leave: 0.6, max: 6, intro: 32 },
+        merge: { bpm: 96, fill: 0.24, figures: true, inverse: 0, brand: 0, hold: [24, 64], leave: 0.6, max: 6, intro: 32, skip: ['brand', 'drops'], skipNames: ['36-how-to-bleed', 'acephale-drop', 'weeping-eye'] },
     };
     const script = document.currentScript;
     const M = MODES[(script && script.dataset.mode) || 'flow'] || MODES.flow;
@@ -50,12 +50,14 @@
     // ---- icons
     const icons = [], pool = [];             // pool: icon ids, the brand eye and drop weighted up
     for (const set in ICONS) for (const name in ICONS[set]) {
+        if (M.skip && M.skip.includes(set)) continue;               // merge: no eye, no drops
+        if (M.skipNames && M.skipNames.includes(name)) continue;
         const rows = ICONS[set][name];
         if (rows.length > 18 || rows[0].length > 18) continue;
         const id = icons.push(rows.map(r => [...r].map(c => c === 'X'))) - 1;
         for (let i = 0; i < (set === 'brand' ? M.brand : 1); i++) pool.push(id);
     }
-    const brandId = name => { let i = 0; for (const set in ICONS) for (const n in ICONS[set]) { const r = ICONS[set][n]; if (r.length > 18 || r[0].length > 18) continue; if (set === 'brand' && n === name) return i; i++; } return -1; };
+    const brandId = name => { let i = 0; for (const set in ICONS) for (const n in ICONS[set]) { if ((M.skip && M.skip.includes(set)) || (M.skipNames && M.skipNames.includes(n))) continue; const r = ICONS[set][n]; if (r.length > 18 || r[0].length > 18) continue; if (set === 'brand' && n === name) return i; i++; } return -1; };
     const EYE = brandId('occhio');
     const rot180 = g => g.slice().reverse().map(r => r.slice().reverse());
     const pixelsOf = g => { const p = []; g.forEach((row, y) => row.forEach((v, x) => { if (v) p.push([x, y]); })); return p; };
@@ -331,7 +333,7 @@
             return s => {
                 if (s % 16 !== 0) return [];
                 const a = freeCell(); if (!a) return [];
-                const inv = chance(0.4);
+                const inv = M.inverse > 0 && chance(0.4);
                 return [[0, 0], [1, 0], [0, 1], [1, 1], [-1, 0], [0, -1]].slice(0, 3 + rnd(4))
                     .map(([dx, dy], i) => [a[0] + dx, a[1] + dy, { inverse: inv && i % 2 === 0, order: 'bloom', delay: i }]);
             };
@@ -396,7 +398,7 @@
         const target = capacity();
         if (M.figures) {
             if (s === 0) {
-                if (phrase === 0 && EYE >= 0) figure = FIGURES.echo(EYE);               // open on the eye and its twin
+                if (phrase === 0) figure = FIGURES.echo(EYE >= 0 ? EYE : null);         // open on a symbol and its twin (the eye, where allowed)
                 else if (hushNext) { figure = FIGURES.hush(); hushNext = false; }
                 else if (phrase % 10 === 9 && flock(now)) { figure = FIGURES.hush(); hushNext = true; }
                 else figure = nextFigure();

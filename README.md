@@ -79,6 +79,7 @@ python3 tools/build_icons.py --sheet   # src/icons.js + build/compare.png (v1 gr
 - **Arrivals.** Glyphs arrive with the calm figures: euclidean pulses, sweeps, the echo rotated 180°, clusters and hushes. They are built pixel by pixel, some inside a filled square.
 - **Leaving.** Glyphs then leave the flow way, as migrating ribbons or as drifters that bend the grid.
 - **Repeats.** The only time a symbol appears twice is an echo and its twin.
+- **Which symbols.** Merge leaves out the eye, the drops (the `brand` and `drops` sets, plus #36, acephale-drop and weeping-eye) and the filled squares. Every symbol is ink on the ground, blue on grey, and the opening is a random symbol with its twin.
 - **How many and how fast.** At most six symbols are on screen at once, counting settled glyphs, ribbons and drifters. The page opens with two bars of silence. The eye and its twin then build slowly, and one more symbol is allowed each phrase, up to the cap.
 
 Craft notes on merge and flow. These are the choices behind the current version:
