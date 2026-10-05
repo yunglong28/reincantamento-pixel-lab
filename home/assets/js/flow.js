@@ -12,7 +12,7 @@
    way they do on the calm home: euclidean pulses, sweeps along a row, a twin in
    the cell rotated 180°, clusters and hushes, built pixel by pixel in scatter,
    scan, rain or bloom order, some inside a filled square.
-   No symbol is on screen twice, except an echo and its rotated twin.
+   No symbol is on screen twice; in flow the echo's rotated twin is the one exception, in merge not even that.
 
    Timing: every journey lasts a whole number of beats and leaves on a beat, so
    ribbons and drifters land on the pulse. The piece breathes over sixteen
@@ -31,7 +31,7 @@
     const MODES = {
         // max: symbols on screen at once (settled + ribbons + drifters); intro: silent sixteenths before the first one
         flow:  { bpm: 84, fill: 0.14, figures: false, inverse: 0, brand: 1, hold: [24, 72], leave: 0.7, max: Infinity, intro: 0 },
-        merge: { bpm: 96, fill: 0.24, figures: true, inverse: 0, brand: 0, hold: [24, 64], leave: 0.6, max: 6, intro: 32, skip: ['brand', 'drops'], skipNames: ['36-how-to-bleed', 'acephale-drop', 'weeping-eye'] },
+        merge: { bpm: 96, fill: 0.24, figures: true, inverse: 0, brand: 0, hold: [24, 64], leave: 0.6, max: 6, intro: 32, skip: ['brand', 'drops'], skipNames: ['36-how-to-bleed', 'acephale-drop', 'weeping-eye', 'hyperlocal-pin', 'bonfire'], unique: true },
     };
     const script = document.currentScript;
     const M = MODES[(script && script.dataset.mode) || 'flow'] || MODES.flow;
@@ -326,6 +326,10 @@
                 const pairs = emptyCells().filter(cell => { const t = twin(cell); return freeSet.has(key(...t)) && !settled.has(key(...t)) && key(...t) !== key(...cell); });
                 const a = pairs.length ? pairs[rnd(pairs.length)] : null;
                 const id = forced != null && s === 0 ? forced : pickId(); if (!a || id == null) return [];
+                if (M.unique) {                                        // never two of the same: the answer is another symbol
+                    const id2 = pickId(id); if (id2 == null) return [[...a, { id }]];
+                    return [[...a, { id }], [cols - 1 - a[0], rows - a[1], { id: id2, delay: 3 }]];
+                }
                 return [[...a, { id }], [cols - 1 - a[0], rows - a[1], { id, flip: true, delay: 3 }]];
             };
         },
@@ -357,6 +361,7 @@
         if (!freeSet.has(key(c, r)) || settled.has(key(c, r)) || reserved.has(key(c, r))) return;
         if (onScreenCount() >= capacity()) return;
         const id = o.id ?? pickId(); if (id == null) return;
+        if (M.unique && inUse().has(id)) return;
         const gl = settle(c, r, id, o);
         if (sixteenth < 32) gl.rate = Math.max(1, Math.ceil(gl.px.length / 16));      // the first glyphs take their time
     }
