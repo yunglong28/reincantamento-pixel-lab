@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REINCANTAMENTO — merge</title>
+    <meta name="description" content="Reincantamento is a research and publishing collective exploring technology, radical imagination, and rituality.">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="REINCANTAMENTO">
+    <meta property="og:description" content="A research and publishing collective exploring technology, radical imagination, and rituality.">
+    <meta property="og:type" content="website">
+
+    <link rel="icon" href="assets/images/REINC-LOGO.svg" type="image/svg+xml">
+    <link rel="icon" href="assets/images/reinc-eye-nero.png" type="image/png"><!-- fallback -->
+
+    <!-- Preload the nav font (Apfel Grotezk Mittel) — used in the above-the-fold header -->
+    <link rel="preload" href="assets/fonts/ApfelGrotezk-Mittel.woff2" as="font" type="font/woff2" crossorigin>
+
+    <link rel="stylesheet" href="assets/css/styles.css">
+
+    <!-- Not deferred: applies the stored palette before first paint. -->
+    <script src="assets/js/theme.js"></script>
+</head>
+<body>
+
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+        <a class="brand" href="index.html" aria-label="Reincantamento home">
+            <img src="assets/images/REINC-LOGO.svg" alt="Reincantamento" width="53" height="25">
+        </a>
+
+        <button class="nav-toggle" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="primary-nav">
+            <span></span><span></span><span></span>
+        </button>
+
+        <nav class="main-nav" id="primary-nav" aria-label="Primary">
+            <div class="nav-item">
+                <a href="https://yunglong28.github.io/reincantamento-homepage/writing/index.html">Writings</a>
+                <div class="nav-menu">
+                    <a href="https://yunglong28.github.io/reincantamento-homepage/writing/index.html">Drops</a>
+                    <a href="https://yunglong28.github.io/reincantamento-homepage/writing/archive.html">Archive</a>
+                </div>
+            </div>
+            <a href="https://yunglong28.github.io/reincantamento-homepage/publishing/index.html">Publishing</a>
+            <a href="https://yunglong28.github.io/reincantamento-homepage/artworks/index.html">Artworks</a>
+            <a href="https://yunglong28.github.io/reincantamento-homepage/workshops/index.html">Workshops</a>
+            <a href="https://yunglong28.github.io/reincantamento-homepage/talks/index.html">Talks</a>
+        </nav>
+
+        <a class="about-btn" href="https://yunglong28.github.io/reincantamento-homepage/about.html">About</a>
+    </header>
+
+    <main class="hero" id="main" tabindex="-1">
+        <div class="statement">
+            <p>Reincantamento is a research and publishing group<br>
+            exploring technology, radical imagination and rituality.</p>
+            <p>We build spaces for collective inquiry<br>
+            beyond disciplinary and institutional boundaries.</p>
+        </div>
+    </main>
+
+    <!-- Real CSS-grid placement layer, aligned to the same 90px module as the
+         background grid. Drop media into a cell with grid-column / grid-row;
+         a cell can span multiple squares (e.g. span 2). This layer is a scaffold
+         for the single hero screen — as real content sections are added it
+         becomes section-scoped. -->
+    <div class="grid-layer" aria-hidden="true">
+        <figure class="media-cell" style="grid-column: 1; grid-row: -2 / -1;">
+            <video class="media" autoplay muted loop playsinline>
+                <source src="assets/images/metaphor.mp4" type="video/mp4">
+            </video>
+        </figure>
+    </div>
+
+    <!-- The colourway switch is a cell of its own: bottom right of the first
+         screen, under the ABOUT cell at the top of the same column. -->
+    <button class="theme-switch" type="button" aria-pressed="false" aria-label="Acid mode" title="Acid mode">&#9791;</button>
+
+    <footer class="site-footer site-footer--flush">
+        <p class="site-footer__mark">REINCANTAMENTO</p>
+
+        <div class="footer-cols">
+            <form class="newsletter" action="https://reincantamentox.substack.com/subscribe" method="get" target="_blank">
+                <label class="newsletter__label" for="nl-email">Subscribe to drops</label>
+                <div class="newsletter__field">
+                    <input id="nl-email" type="email" name="email" placeholder="your@email.com" autocomplete="email">
+                    <button type="submit" aria-label="Subscribe">&#8594;</button>
+                </div>
+            </form>
+
+            <nav class="footer-social" aria-label="Nodes">
+                <a href="mailto:reincantamento@proton.me">Email</a>
+                <a href="https://www.instagram.com/re.incantamento/" target="_blank" rel="noopener">Instagram</a>
+                <a href="https://t.me/+C1fjM6yVcdJmYzI0" target="_blank" rel="noopener">Telegram</a>
+                <a href="https://reincantamentox.substack.com/" target="_blank" rel="noopener">Newsletter</a>
+                <a href="https://www.are.na/reincantamento/channels/" target="_blank" rel="noopener">Are.na</a>
+            </nav>
+        </div>
+
+        <div class="footer-bottom">
+            <p>2026 Reincantamento &nbsp;&#183;&nbsp; Berlin / Turin</p>
+        </div>
+    </footer>
+
+    <script src="assets/js/main.js" defer></script>
+    <script src="../src/icons.js" defer></script>
+    <script src="assets/js/flow.js" data-mode="merge" defer></script>
+</body>
+</html>

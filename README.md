@@ -74,4 +74,10 @@ python3 tools/build_icons.py --sheet   # src/icons.js + build/compare.png (v1 gr
 - **Migrations.** When a glyph's time is up, it usually breaks into a ribbon of pixels. The ribbon snakes along an S-curve to another square and lands there as a different symbol.
 - **Drifters.** Sometimes a glyph lifts off the grid instead and wanders on slow Lissajous paths. The white grid lines bend around it like a lens. When it tires, it glides back into the nearest empty square.
 
+`home/merge.html` combines the calm home and flow, using the same engine with `data-mode="merge"`. It runs at 96 BPM.
+
+- **Arrivals.** Glyphs arrive with the calm figures: euclidean pulses, sweeps, the echo rotated 180°, clusters and hushes. They are built pixel by pixel, some inside a filled square.
+- **Leaving.** Glyphs then leave the flow way, as migrating ribbons or as drifters that bend the grid.
+- **Repeats.** The only time a symbol appears twice is an echo and its twin.
+
 To preview it, run `python3 -m http.server` from the repo root and open `/home/index.html`. `home/` loads `../src/icons.js`, so any change made in the lab and rebuilt with `build_icons.py` reaches the home page too.

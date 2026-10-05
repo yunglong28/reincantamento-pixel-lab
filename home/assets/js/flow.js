@@ -8,7 +8,11 @@
        Lissajous paths, behind the statement and across the squares; the grid
        lines bend around them like a lens. When a drifter tires it glides back
        into the nearest empty square.
-   No symbol is on screen twice. Decorative only: aria-hidden canvas, no pointer
+   With data-mode="merge" on the <script> (merge.html), glyphs also arrive the
+   way they do on the calm home: euclidean pulses, sweeps along a row, a twin in
+   the cell rotated 180°, clusters and hushes, built pixel by pixel in scatter,
+   scan, rain or bloom order, some inside a filled square.
+   No symbol is on screen twice, except an echo and its rotated twin. Decorative only: aria-hidden canvas, no pointer
    events, still frame under prefers-reduced-motion, paused while hidden. */
 (() => {
     'use strict';
@@ -16,9 +20,14 @@
     const ICONS = window.ICONS;
     if (!ICONS) return;
 
-    const BPM = 84;
-    const SIXTEENTH = 60000 / BPM / 4;
-    const FILL = 0.14;                       // share of free squares holding a glyph
+    const MODES = {
+        flow:  { bpm: 84, fill: 0.14, figures: false, inverse: 0, brand: 1, hold: [24, 72], leave: 0.7 },
+        merge: { bpm: 96, fill: 0.24, figures: true, inverse: 0.12, brand: 3, hold: [16, 48], leave: 0.6 },
+    };
+    const script = document.currentScript;
+    const M = MODES[(script && script.dataset.mode) || 'flow'] || MODES.flow;
+    const SIXTEENTH = 60000 / M.bpm / 4;
+    const FILL = M.fill;                     // share of free squares holding a glyph
     const MAX_DRIFTERS = 2;
     const root = document.documentElement;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -29,15 +38,24 @@
     const ease = u => 0.5 - 0.5 * Math.cos(Math.PI * u);
 
     // ---- icons
-    const icons = [];
+    const icons = [], pool = [];             // pool: icon ids, the brand eye and drop weighted up
     for (const set in ICONS) for (const name in ICONS[set]) {
         const rows = ICONS[set][name];
         if (rows.length > 18 || rows[0].length > 18) continue;
-        icons.push(rows.map(r => [...r].map(c => c === 'X')));
+        const id = icons.push(rows.map(r => [...r].map(c => c === 'X'))) - 1;
+        for (let i = 0; i < (set === 'brand' ? M.brand : 1); i++) pool.push(id);
     }
+    const rot180 = g => g.slice().reverse().map(r => r.slice().reverse());
     const pixelsOf = g => { const p = []; g.forEach((row, y) => row.forEach((v, x) => { if (v) p.push([x, y]); })); return p; };
     const scan = px => px.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
     const shuffle = px => px.sort(() => Math.random() - 0.5);
+    const ORDERS = {
+        scatter: shuffle,
+        scan,
+        rain: px => px.sort((a, b) => a[0] - b[0] || a[1] - b[1]),
+        bloom: (px, g) => { const cx = g[0].length / 2, cy = g.length / 2; return px.sort((a, b) => Math.hypot(a[0] - cx, a[1] - cy) - Math.hypot(b[0] - cx, b[1] - cy)); },
+    };
+    const ORDER_NAMES = Object.keys(ORDERS);
 
     // ---- canvas
     const cv = document.createElement('canvas');
@@ -50,8 +68,11 @@
     let free = [], freeSet = new Set();
     const key = (c, r) => c + ',' + r;
     const css = n => getComputedStyle(root).getPropertyValue(n).trim();
-    let ink = '#0009ff', bg = '#d9d9d9', line = '#ffffff';
-    const readColours = () => { ink = css('--ink') || ink; bg = css('--bg') || bg; line = css('--line') || line; };
+    let ink = '#0009ff', bg = '#d9d9d9', line = '#ffffff', band = '#0009ff', onBand = '#ffffff';
+    const readColours = () => {
+        ink = css('--ink') || ink; bg = css('--bg') || bg; line = css('--line') || line;
+        band = css('--band') || band; onBand = css('--on-band') || onBand;
+    };
 
     const settled = new Map();               // "c,r" -> glyph sitting in a square
     const reserved = new Set();              // squares a migration is heading to
@@ -95,16 +116,22 @@
     }
     function pickId(extra) {
         const used = inUse(); if (extra != null) used.add(extra);
-        const open = []; for (let i = 0; i < icons.length; i++) if (!used.has(i)) open.push(i);
+        const open = pool.filter(i => !used.has(i));
         return open.length ? open[rnd(open.length)] : null;
     }
     const emptyCells = () => free.filter(([c, r]) => !settled.has(key(c, r)) && !reserved.has(key(c, r)));
 
     // ---- settled glyphs: build up, hold, then leave (dissolve, migrate or lift off)
     function settle(c, r, id, opts = {}) {
-        const g = icons[id];
-        const px = opts.px || shuffle(pixelsOf(g));
-        const gl = { id, g, px, c, r, shown: opts.shown || 0, rate: Math.max(1, Math.ceil(px.length / rand(6, 14))), hold: 24 + rnd(48), phase: 'in' };
+        const g = opts.flip ? rot180(icons[id]) : icons[id];
+        const order = opts.order || (M.figures ? ORDER_NAMES[rnd(ORDER_NAMES.length)] : 'scatter');
+        const px = opts.px || ORDERS[order](pixelsOf(g), g);
+        const gl = {
+            id, g, px, c, r, shown: opts.shown || 0, phase: 'in',
+            rate: Math.max(1, Math.ceil(px.length / rand(M.figures ? 3 : 6, M.figures ? 9 : 14))),
+            hold: opts.hold ?? M.hold[0] + rnd(M.hold[1] - M.hold[0]),
+            inverse: opts.inverse ?? chance(M.inverse),
+        };
         settled.set(key(c, r), gl);
         return gl;
     }
@@ -149,7 +176,7 @@
     function finishMigration(m) {
         reserved.delete(key(...m.toCell));
         if (!freeSet.has(key(...m.toCell))) return;
-        const gl = settle(m.toCell[0], m.toCell[1], m.toId, { px: m.dstPx, shown: Math.min(m.src.length, m.dst.length) });
+        const gl = settle(m.toCell[0], m.toCell[1], m.toId, { px: m.dstPx, shown: Math.min(m.src.length, m.dst.length), inverse: false });
         if (gl.shown >= gl.px.length) gl.phase = 'hold';
     }
 
@@ -230,6 +257,48 @@
         ctx.globalAlpha = 1;
     }
 
+    // ---- the calm home's figures (merge): each returns step -> [col, row, opts] requests
+    const freeCell = () => { const e = emptyCells(); return e.length ? e[rnd(e.length)] : null; };
+    const FIGURES = {
+        pulse() { const pat = euclid([3, 5, 7][rnd(3)], 16), rot = rnd(16); return s => (pat[(s + rot) % 16] ? [freeCell()] : []); },
+        sweep() {
+            const rowsWith = [...new Set(free.map(f => f[1]))], row = rowsWith[rnd(rowsWith.length)];
+            let ln = free.filter(f => f[1] === row); if (chance(0.5)) ln = ln.reverse();
+            const every = [2, 3][rnd(2)];
+            return s => (s % every === 0 && ln[s / every] ? [[...ln[s / every], { order: 'scan', hold: 8 + rnd(12) }]] : []);
+        },
+        echo() {
+            return s => {
+                if (s % 8 !== 0) return [];
+                const a = freeCell(), id = pickId(); if (!a || id == null) return [];
+                return [[...a, { id }], [cols - 1 - a[0], rows - a[1], { id, flip: true, delay: 3 }]];
+            };
+        },
+        cluster() {
+            return s => {
+                if (s % 16 !== 0) return [];
+                const a = freeCell(); if (!a) return [];
+                const inv = chance(0.4);
+                return [[0, 0], [1, 0], [0, 1], [1, 1], [-1, 0], [0, -1]].slice(0, 3 + rnd(4))
+                    .map(([dx, dy], i) => [a[0] + dx, a[1] + dy, { inverse: inv && i % 2 === 0, order: 'bloom', delay: i }]);
+            };
+        },
+        hush() { const at = rnd(32); return s => (s === at ? [freeCell()] : []); },
+    };
+    const WEIGHTS = [['pulse', 4], ['sweep', 2], ['echo', 2], ['cluster', 2], ['hush', 1]];
+    const nextFigure = () => {
+        let t = Math.random() * 11;
+        for (const [n, w] of WEIGHTS) if ((t -= w) < 0) return FIGURES[n]();
+        return FIGURES.pulse();
+    };
+    let figure = null, pending = [];
+    function request(c, r, o = {}) {
+        if (!freeSet.has(key(c, r)) || settled.has(key(c, r)) || reserved.has(key(c, r))) return;
+        if (settled.size + migrations.length >= Math.max(3, Math.round(free.length * FILL))) return;
+        const id = o.id ?? pickId(); if (id == null) return;
+        settle(c, r, id, o);
+    }
+
     // ---- rhythm
     const euclid = (k, n) => { const o = []; for (let i = 0; i < n; i++) o.push(Math.floor((i + 1) * k / n) - Math.floor(i * k / n)); return o; };
     let sixteenth = 0, pattern = euclid(3, 8), nextBeat = 0;
@@ -239,7 +308,14 @@
         for (const gl of [...settled.values()]) stepSettled(gl);
 
         const target = Math.max(3, Math.round(free.length * FILL));
-        if (pattern[s % pattern.length] && settled.size + migrations.length < target && chance(0.8)) {
+        if (M.figures) {
+            if (s === 0) figure = nextFigure();
+            let hits = figure(s).filter(Boolean).map(h => (h.length === 2 ? [...h, {}] : h));
+            if (hits.length && chance(0.12)) hits = [];                                   // a dropped beat
+            if (!hits.length && s % 2 === 1 && chance(0.04)) { const f = freeCell(); if (f) hits = [[...f, {}]]; }   // a ghost note
+            for (const [c, r, o] of hits) { if (o.delay) pending.push([sixteenth + o.delay, c, r, o]); else request(c, r, o); }
+            pending = pending.filter(p => { if (p[0] > sixteenth) return true; request(p[1], p[2], p[3]); return false; });
+        } else if (pattern[s % pattern.length] && settled.size + migrations.length < target && chance(0.8)) {
             const e = emptyCells(), id = pickId();
             if (e.length && id != null) { const [c, r] = e[rnd(e.length)]; settle(c, r, id); }
         }
@@ -247,7 +323,7 @@
         if (s % 4 === 0) {
             for (const gl of [...settled.values()]) {
                 if (gl.phase !== 'leave') continue;
-                if (chance(0.3)) { gl.phase = 'out'; continue; }
+                if (!chance(M.leave)) { gl.phase = 'out'; continue; }
                 if (drifters.length < MAX_DRIFTERS && chance(0.3)) { lift(gl, now); continue; }
                 const e = emptyCells().filter(([c, r]) => { const d = Math.hypot(c - gl.c, r - gl.r); return d >= 3 && d <= 9; });
                 const id = pickId(gl.id);
@@ -265,6 +341,10 @@
     // ---- frame
     function drawGlyphAt(gl) {
         const p = pxFor(gl.g), ox = Math.round(gl.c * colW + (colW - gl.g[0].length * p) / 2), oy = Math.round(gl.r * rowH + (rowH - gl.g.length * p) / 2);
+        if (gl.inverse) {                                       // a filled square, inset 1px like the site's blocks
+            ctx.fillStyle = band; ctx.fillRect(gl.c * colW + 1, gl.r * rowH + 1, colW - 1, rowH - 1);
+            ctx.fillStyle = onBand;
+        } else ctx.fillStyle = ink;
         for (let i = 0; i < gl.shown; i++) { const [x, y] = gl.px[i]; ctx.fillRect(ox + x * p, oy + y * p, p, p); }
     }
     function frame(now) {
@@ -281,8 +361,8 @@
             if (migrationPixels(m, now, flying)) { migrations.splice(i, 1); finishMigration(m); }
             else { const u = ease(clamp01((now - m.start) / m.dur)); const [x, y] = bez(m, u); lens(x, y, 0.45 * Math.sin(Math.PI * u)); }
         }
-        ctx.fillStyle = ink;
         for (const gl of settled.values()) drawGlyphAt(gl);
+        ctx.fillStyle = ink;
         for (const [x, y, a, p] of flying) { ctx.globalAlpha = a; ctx.fillRect(Math.round(x), Math.round(y), p, p); }
         ctx.globalAlpha = 1;
         for (const d of drifters) for (const [x, y] of drifterPixels(d)) ctx.fillRect(x, y, d.p, d.p);
