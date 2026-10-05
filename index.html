@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>REINCANTAMENTO pixel lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{--bg:#D9D9D9;--fg:#0000FF;--panel:#cfcfcf;--line:#0000FF;--muted:#3a3aa8;--warn:#E05A00;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b0b2e;--fg:#D9D9D9;--panel:#14144a;--line:#5a5aff;--muted:#a9a9e6;--warn:#ff9a4d}}
+:root[data-theme="dark"]{--bg:#0b0b2e;--fg:#D9D9D9;--panel:#14144a;--line:#5a5aff;--muted:#a9a9e6;--warn:#ff9a4d}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:13px}
+h1{font-family:'Silkscreen',monospace;font-weight:400;font-size:22px;margin:0;letter-spacing:.04em}
+header{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;padding:16px 20px;border-bottom:2px solid var(--line)}
+nav{display:flex;flex-wrap:wrap;gap:6px}
+button{font:inherit;color:var(--fg);background:transparent;border:2px solid var(--line);padding:6px 10px;cursor:pointer;min-height:36px}
+button:hover{background:var(--fg);color:var(--bg)}
+button.on{background:var(--fg);color:var(--bg)}
+main{display:grid;grid-template-columns:minmax(260px,360px) 1fr;min-height:calc(100vh - 80px)}
+@media (max-width:820px){main{grid-template-columns:1fr}}
+#list{border-right:2px solid var(--line);padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;align-content:start;overflow:auto}
+@media (max-width:820px){#list{border-right:0;border-bottom:2px solid var(--line)}}
+.card{border:2px solid transparent;padding:8px 6px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;background:transparent;color:var(--fg);min-height:auto}
+.card:hover{background:transparent;color:var(--fg);border-color:var(--muted)}
+.card.sel{border-color:var(--line)}
+.card canvas{image-rendering:pixelated}
+.card .nm{font-size:10px;text-align:center;word-break:break-word}
+.card .bd{font-size:10px;color:var(--warn);min-height:12px}
+#editor{padding:16px 20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.lbl{font-family:'Silkscreen',monospace;font-size:11px;margin-right:6px;opacity:.8}
+#stage{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
+#p5wrap{border:2px solid var(--line);line-height:0;max-width:100%;overflow:auto;touch-action:none}
+#side{display:flex;flex-direction:column;gap:12px;min-width:200px}
+.prev{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.prev div{padding:8px;line-height:0}
+.prev canvas{image-rendering:pixelated}
+#stats{white-space:pre;line-height:1.6}
+.warn{color:var(--warn)}
+#msg{min-height:18px}
+</style>
+</head>
+<body>
+<header>
+<h1>PIXEL LAB</h1>
+<nav id="sets"></nav>
+</header>
+<main>
+<section id="list" aria-label="Icone"></section>
+<section id="editor">
+<div class="row"><span class="lbl">Nome</span><strong id="name"></strong></div>
+<div id="stage">
+<div id="p5wrap"></div>
+<div id="side">
+<div class="prev" id="prev"></div>
+<div id="stats"></div>
+</div>
+</div>
+<div class="row"><span class="lbl">Disegno</span>
+<button id="mirror">Specchio X</button>
+<button data-op="undo">Annulla</button>
+<button data-op="reset">Originale</button>
+</div>
+<div class="row"><span class="lbl">Operazioni</span>
+<button data-op="flipH">Rifletti ↔</button>
+<button data-op="flipV">Rifletti ↕</button>
+<button data-op="outline">Contorno</button>
+<button data-op="fill">Riempi</button>
+<button data-op="dither">Retino</button>
+<button data-op="invert">Inverti</button>
+<button data-op="orphans">Togli orfani</button>
+</div>
+<div class="row"><span class="lbl">Sposta</span>
+<button data-op="L" aria-label="Sposta a sinistra">←</button>
+<button data-op="R" aria-label="Sposta a destra">→</button>
+<button data-op="U" aria-label="Sposta su">↑</button>
+<button data-op="D" aria-label="Sposta giù">↓</button>
+<span class="lbl" style="margin-left:10px">Tela</span>
+<button data-op="addC">+ col</button><button data-op="remC">− col</button>
+<button data-op="addR">+ riga</button><button data-op="remR">− riga</button>
+<button data-op="trim">Rifila</button>
+</div>
+<div class="row"><span class="lbl">Colore</span>
+<button class="ink on" data-ink="#0000FF">Blu</button>
+<button class="ink" data-ink="#D9D9D9">Grigio</button>
+<button class="ink" data-ink="#000000">Nero</button>
+</div>
+<div class="row"><span class="lbl">Esporta</span>
+<button data-ex="png">PNG ×32</button>
+<button data-ex="svg">SVG</button>
+<button data-ex="zip">Set in ZIP</button>
+<button data-ex="json">Tutto in JSON</button>
+</div>
+<div id="msg"></div>
+</section>
+</main>
+<script>
+const ORIG = {"drops": {"base": ["....X....", "....XX...", "....XXX..", "..XXXXX..", ".XX...XX.", "XX.....XX", "X..XXX..X", "X..XXX..X", "X..XXX..X", "XX.....XX", ".XX...XX.", "..XXXXX.."], "solid": ["....X....", "....XX...", "....XXX..", "..XXXXX..", ".XXXXXXX.", "XXXXXXXXX", "XXX...XXX", "XXX...XXX", "XXX...XXX", "XXXXXXXXX", ".XXXXXXX.", "..XXXXX.."], "outline": ["....X....", "....XX...", "....XXX..", "..XXXXX..", ".XX...XX.", "XX.....XX", "X.......X", "X.......X", "X.......X", "XX.....XX", ".XX...XX.", "..XXXXX.."], "hollow-core": ["....X....", "....XX...", "....XXX..", "..XXXXX..", ".XX...XX.", "XX.....XX", "X..XXX..X", "X..X.X..X", "X..XXX..X", "XX.....XX", ".XX...XX.", "..XXXXX.."], "nested": ["....X....", "....XX...", "....XXX..", "..XXXXX..", ".XX...XX.", "XX..X..XX", "X...XX..X", "X..XXX..X", "X..XXX..X", "XX.....XX", ".XX...XX.", "..XXXXX.."], "star": ["....X....", "....XX...", "....XXX..", "..XXXXX..", ".XX...XX.", "XX.X.X.XX", "X...X...X", "X.XX.XX.X", "X...X...X", "XX.X.X.XX", ".XX...XX.", "..XXXXX.."], "pin": ["..XXXXX..", ".XX...XX.", "XX.....XX", "X..XXX..X", "X..XXX..X", "X..XXX..X", "XX.....XX", ".XX...XX.", "..XXXXX..", "....XXX..", "....XX...", "....X...."], "keyhole": ["....X....", "....XX...", "....XXX..", "..XXXXX..", ".XXXXXXX.", "XXX...XXX", "XXX...XXX", "XXXX.XXXX", "XXXX.XXXX", "XXX...XXX", ".XXXXXXX.", "..XXXXX.."], "dither": ["....X....", "....XX...", "....X.X..", "..XX.XX..", ".XX.X.XX.", "XX.X.X.XX", "X.X.X.X.X", "XX.X.X.XX", "X.X.X.X.X", "XX.X.X.XX", ".XX.X.XX.", "..XXXXX.."], "weeping-eye": [".....XXXXX.....", "...XX.....XX...", ".XX...XXX...XX.", "X....XX.XX....X", ".XX...XXX...XX.", "...XX.....XX...", ".....XXXXX.....", "...............", ".......X.......", ".......XX......", "......XXX......", ".......X......."], "portal": [".......X.......", ".......XX......", "......XXX......", ".....XXXXX.....", "....XXX.XXX....", "...XXX...XXX...", "...XX.....XX...", "..XXX.....XXX..", "..XX.......XX..", "..XX.......XX..", "..XXXXXXXXXXX..", "..XX.X.X.X.XX..", "..XX.X.X.X.XX..", "..XXXXXXXXXXX..", "..XX.X.X.X.XX..", "..XX.X.X.X.XX..", "..XX.X.X.X.XX..", "..XX.......XX..", "..XX.......XX..", ".XXXXXXXXXXXXX.", "XXXXXXXXXXXXXXX"]}, "acephale": {"acephale": ["....XXX....", ".XXXXXXXXX.", "X.XXXXXXX.X", "X.XXXXXXX.X", "X.XXXXXXX.X", "X.XXXXXXX.X", "X..XXXXX..X", "XX.XXXXX.XX", "...XX.XX...", "...XX.XX...", "...XX.XX...", "...XX.XX...", "..XXX.XXX.."], "acephale-drop": [".....X.....", ".....XX....", "....XXX....", "...XXXXX...", "...XXXXX...", "....XXX....", "...........", "....XXX....", ".XXXXXXXXX.", "X.XXXXXXX.X", "X.XXXXXXX.X", "X.XXXXXXX.X", "X.XXXXXXX.X", "X..XXXXX..X", "XX.XXXXX.XX", "...XX.XX...", "...XX.XX...", "...XX.XX...", "...XX.XX...", "..XXX.XXX.."], "acephale-ecstasy": ["X.........X", "X.........X", ".X..XXX..X.", ".XXXXXXXXX.", "...XXXXX...", "...XXXXX...", "...XXXXX...", "...XXXXX...", "...XX.XX...", "...XX.XX...", "...XX.XX...", "...XX.XX...", "..XXX.XXX.."], "acephale-fire": ["...X...X...", "...XX.XX...", "....XXX....", "....XXX....", ".XXXXXXXXX.", "X.XXXXXXX.X", "X.XXXXXXX.X", "X.XXXXXXX.X", "X.XXXXXXX.X", "X..XXXXX..X", "XX.XXXXX.XX", "...XX.XX...", "...XX.XX...", "...XX.XX...", "...XX.XX...", "..XXX.XXX.."], "acephale-void": ["....XXX....", ".XXXXXXXXX.", "X.XXXXXXX.X", "X.XXX.XXX.X", "X.XX...XX.X", "X.XXX.XXX.X", "X..XXXXX..X", "XX.XXXXX.XX", "...XX.XX...", "...XX.XX...", "...XX.XX...", "...XX.XX...", "..XXX.XXX.."]}, "prosopon": {"prosopon": [".XXXXXXXXX.", "XXXXXXXXXXX", "XXXXXXXXXXX", "XX...X...XX", "XXX.XXX.XXX", "XXXXXXXXXXX", "XXXXXXXXXXX", "XXX.....XXX", ".XXX...XXX.", "..XXXXXXX..", "...XXXXX...", "....XXX...."], "speaking": [".XXXXXXXXX.", "XXXXXXXXXXX", "XXXXXXXXXXX", "XX...X...XX", "XXX.XXX.XXX", "XXXXXXXXXXX", "XXXXXXXXXXX", "XXX.....XXX", ".XX.....XX.", "..XX...XX..", "...XX.XX...", "....XXX...."], "persona-stack": [".XXXXXXXXX.", "XXXXXXXXXXX", "XXXXXXXXXXX", "XX...X...XX", "XXX.XXX.XXX", "...........", "XXXXXXXXXXX", "XXXXXXXXXXX", "...........", "XXX.....XXX", ".XXX...XXX.", "..XXXXXXX..", "...XXXXX...", "....XXX...."], "impersonal": [".XXXXXXXXX.", "X.........X", "X.........X", "X.........X", "X.........X", "X.........X", "X.........X", "X.........X", ".X.......X.", "..X.....X..", "...X...X...", "....XXX...."], "steered": ["...XXXXXXXXX...", "..XXXXXXXXXXX..", "..XXXXXXXXXXX..", "..XX...X...XX..", "..XXX.XXX.XXX..", "..XXXXXXXXXXXX.", "XXX.........XXX", "..XXX.....XXXX.", "...XXX...XXX...", "....XXXXXXX....", ".....XXXXX.....", "......XXX......"]}, "dissipation": {"soundsystem": ["XXXXXXXXX", "X.......X", "X..XXX..X", "X.X...X.X", "X.X.X.X.X", "X.X...X.X", "X..XXX..X", "X.......X", "X.XXXXX.X", "X.X...X.X", "X.X.X.X.X", "X.X...X.X", "X.XXXXX.X", "X.......X", "XXXXXXXXX"], "bonfire": [".....X.....", "....XX.....", "....XXX....", "...XXXX.X..", "..XXX.XXX..", "..XX...XX..", "..XX.X.XX..", "...XXXXX...", "...........", "XX.......XX", "..XX...XX..", "....XXX....", "..XX...XX..", "XX.......XX"], "design-the-ending": ["XXXXXXXXX", ".X.....X.", ".X.....X.", "..X...X..", "...X.X...", "....X....", "...X.X...", "..X.X.X..", ".X..X..X.", ".X.XXX.X.", ".XXXXXXX.", "XXXXXXXXX"], "metastable-excess": ["...XX........", "..X..X.....X.", ".X....X...X..", "X......X.X...", "........X....", ".............", ".............", "XXXXXXXXXXXXX"]}, "alchemy": {"athanor-chip": ["..X.X.X.X.X..", ".XXXXXXXXXXX.", "XX.........XX", ".X....X....X.", "XX....XX...XX", ".X...XXX...X.", "XX..XX.XX..XX", ".X..X...X..X.", "XX..XX.XX..XX", ".X...XXX...X.", "XX.........XX", ".XXXXXXXXXXX.", "..X.X.X.X.X.."], "ouroboros-cable": [".......XXXX....", ".......XX.X....", "...XX..XXXXX...", "..XXX...XXXXX..", ".XXX.......XXX.", ".XX.........XX.", ".XX.........XX.", ".XX.........XX.", ".XX.........XX.", ".XX.........XX.", ".XXX.......XXX.", "..XXX.....XXX..", "...XXXXXXXXX...", "....XXXXXXX....", "..............."], "hermetic-vessel": ["...XXXXX...", "....X.X....", "....X.X....", "....X.X....", "...X...X...", "..X.....X..", ".X.X.....X.", "X..XX.....X", "X..XXX....X", "X..XXXX...X", "X..XX.....X", ".X..X....X.", "..X.....X..", "...XXXXX..."], "programma-101-altar": [".X...........X.", "...............", ".X..XXXXXXX..X.", ".X..X.....X..X.", ".X.XXXXXXXXX.X.", ".X.X.X.X.X.X.X.", ".X.XXXXXXXXX.X.", ".X.X.X.X.X.X.X.", ".X.XXXXXXXXX.X.", "XXXXXXXXXXXXXXX", ".X...........X.", ".X...........X.", ".X...........X."]}, "archives": {"captive-portal": [".......X.......", ".......XX......", "......XXX......", ".....XXXXX.....", "....XXX.XXX....", "...XXX...XXX...", "...XX.....XX...", "..XXX.....XXX..", "..XX.......XX..", "..XX.......XX..", "..XXXXXXXXXXX..", "..XX.X.X.X.XX..", "..XX.X.X.X.XX..", "..XXXXXXXXXXX..", "..XX.X.X.X.XX..", "..XX.X.X.X.XX..", "..XX.X.X.X.XX..", "..XX.......XX..", "..XX.......XX..", ".XXXXXXXXXXXXX.", "XXXXXXXXXXXXXXX"], "redaction": ["X.X.X.XXXXXXX", ".............", "XXXXXXXX.X.X.", ".............", "X.X.XXXXX.X.X", ".............", "X.X.X.X.XXXXX"], "hyperlocal-pin": ["...XXXXX...", "..XX...XX..", ".XX..X..XX.", ".X..XXX..X.", ".XX..X..XX.", "..XX...XX..", "...XX.XX...", "....XXX....", ".....X.....", "...........", "..XXXXXXX.."], "index-drawer": ["...XXXXX...", "...X...X...", "XXXXXXXXXXX", "X.........X", "X...XXX...X", "X.........X", "XXXXXXXXXXX", "X.........X", "X...XXX...X", "X.........X", "XXXXXXXXXXX", ".X.......X.", ".X.......X."], "signal-halo": ["...XXXXXXX...", "..X.......X..", ".X..XXXXX..X.", "...X.....X...", ".....XXX.....", ".............", "......X......", "......XX.....", ".....XXX.....", "....XXXXX....", "....XXXXX....", ".....XXX....."]}, "collective": {"egregore": ["......X......", ".....X.X.....", "......X......", "......X......", "X.....X.....X", ".X...XXX...X.", "..X.X.X.X.X..", "...X..X..X...", "......X......", ".....X.X.....", "....X...X....", "...X.....X...", "..XX.....XX.."], "learning-circle": [".............", ".....XX......", "..XX.XX..XX..", "..XX.....XX..", ".............", ".XX.......XX.", ".XX...X...XX.", ".............", ".............", "..XX.....XX..", "..XX.XX..XX..", ".....XX......", "............."], "il-cielo-ha-un-limite": ["XXXXXXXXXXXXX", "X...........X", ".............", "..X......X...", ".XXX....XXX..", "..X..X...X...", "....XXX......", ".....X......."], "shared-vision": ["..XXX.XXX..", ".X...X...X.", "X...X.X...X", "X...XXX...X", "X...X.X...X", ".X...X...X.", "..XXX.XXX.."]}, "esoteric": {"candle": ["....X....", "....XX...", "...XXX...", "...XXX...", "....X....", "..XXXXX..", "..XXXXX..", ".XXXXXX..", ".XXXXXX..", "..XXXXX..", "..XXXXX..", "..XXXXX..", "XXXXXXXXX", ".XXXXXXX."], "crystal-ball": ["....XXXXX....", "...X.....X...", "..X.......X..", ".X.XX......X.", "X..X........X", "X.....X.....X", "X.....XX....X", "X....XXX....X", "X...XXXXX...X", ".X...XXX...X.", "..X.......X..", "...X.....X...", "....XXXXX....", "...XXXXXXX...", ".XXXXXXXXXXX."], "grimoire": [".XXXXXX.XXXXXX.", "X......X......X", "X.XXXX.X...X..X", "X......X...XX.X", "X.XXXX.X..XXX.X", "X......X.XXXXXX", "X.XXX..X..XXX.X", "X......X.XXXX.X", ".XXXXXX.XXXXXX.", "...XXXXXXXXX..."], "magic-circle": [".....XXXXX.....", "...XX.....XX...", "..X..X...X..X..", ".X...........X.", ".X....XXX....X.", "X.X..X...X..X.X", "X...X.....X...X", "X...X..X..X...X", "X...X.....X...X", "X.X..X...X..X.X", ".X....XXX....X.", ".X...........X.", "..X..X...X..X..", "...XX.....XX...", ".....XXXXX....."], "crystals": [".....X.....", "....XXX....", "....X.X....", ".X..X.X..X.", "XXX.X.X.XXX", "X.X.X.X.X.X", "X.X.X.X.X.X", "X.X.X.X.X.X", "XXXXXXXXXXX", ".XXXXXXXXX."], "potion": ["....XXX....", "....XXX....", "....X.X....", "....X.X....", "...X...X...", "..X..X..X..", ".X.......X.", "XXXXXXXXXXX", "XXXX.XXXXXX", "XXXXXXX.XXX", "XXXXXXXXXXX", ".XXX.XXXXX.", "..XXXXXXX..", "...XXXXX..."], "labyrinth": ["XXXXXXXXXXXXX", "X...........X", "X.XXXXXXXXX.X", "X.X.......X.X", "X.X.XXXXX.X.X", "X.X.X...X.X.X", "X.X.X.X.X.X.X", "X.X.X.X...X.X", "X.X.X.XXXXX.X", "X.X.X.......X", "X.X.XXXXXXXXX", "X.X..........", "XXXXXXXXXXXXX"], "wand": ["..........X..", ".........X.X.", "...X......X..", ".............", "......X.XX...", ".......XX...X", ".X....XX.....", ".....XX......", "....XX.......", "...XX........", "..XX.........", ".XX..........", ".X..........."], "black-mirror": ["....XXX....", "..XX...XX..", ".X..XXX..X.", ".X.XXXXX.X.", "X.XXX.XXX.X", "X.XXX..XX.X", "X.XX...XX.X", "X.XX...XX.X", ".X.XXXXX.X.", ".X..XXX..X.", "..XX...XX..", "....XXX....", "....XXX....", "....XXX....", "....XXX....", "...XXXXX..."], "key": ["..XXX..........", ".X...X.........", "X.....XXXXXXXXX", "X..X..X.....X.X", "X.....X.....X.X", ".X...X......XXX", "..XXX.........."]}, "drops-archive": {"01-notes-on-corecore": [".X.......X...", "..X.....X....", "...X...X.....", "XXXXXXXXXXXXX", "XX.X..XX.XX.X", "X....X.....XX", "X..XX......XX", "X.X..XXX.X.XX", "X.XX........X", "XXXXXXXXXXXXX", "...XX...XX..."], "03-technic-and-magic": ["....X.X....", "...XXXXX...", ".X.X...X.X.", ".XXX...XXX.", "XX..XXX..XX", ".X..XXX..X.", "XX..XXX..XX", ".XXX...XXX.", ".X.X...X.X.", "...XXXXX...", "....X.X...."], "06-post-colonial-plants": [".XX......XX", "XXXX....XXX", "XXXX..XXXX.", ".XX.X.XX...", ".....XX....", ".....X.....", ".....X.....", ".XXXXXXXXX.", "..XXXXXXX..", "..XXXXXXX..", "...XXXXX..."], "08-phantom-in-the-chain": ["...XXXXX...", "..X.....X..", ".X.......X.", ".X..X.X..X.", ".X..X.X..X.", ".X.......X.", ".X.......X.", ".XX.XXX.XX.", ".....X.....", "....X.X....", ".....X.....", "....X.X....", ".....X....."], "15-paths-of-symmetry": ["X..X..X..X..X", "..X..X.X..X..", ".X..X...X..X.", "X..X..X..X..X", "..X..X.X..X..", ".X..X...X..X.", "X..X..X..X..X", ".X..X...X..X.", "..X..X.X..X..", "X..X..X..X..X", ".X..X...X..X.", "..X..X.X..X..", "X..X..X..X..X"], "21-sabotage": ["........XXXX", "........X..X", "...XXXXXX..X", ".XXX.......X", "XX.........X", "XXXXXXXXXXXX", ".XXX....XXX."], "33-madness-of-vision": [".....XXXXX.....", "...XX.....XX...", ".XX..XXXXX..XX.", "X........X....X", "X....XXX.X....X", "X....X...X....X", ".XX..XXXXX..XX.", "...XX.....XX...", ".....XXXXX....."], "34-nchant": ["....XXX..", "....X.XX.", "....X..XX", "....X...X", "....X....", "....X....", "....X....", "..X.X....", ".XXXX....", "XXXXX....", "XXXXX....", ".XXX....."], "36-how-to-bleed": ["....X....", "....XX...", "...XXX...", "...XXX...", "..XXXXX..", ".XXXXXXX.", "XXXXXXXXX", "XXXXXXXXX", "XXXXXXXXX", ".XXXXXXX.", "..XXXXX..", ".........", "....X....", ".........", "....X...."], "38-already-saved": ["....XXXXX....", "...XXXXXXX...", "..X.XXXXX.X..", ".X..X...X..X.", "XXXX.....XXXX", "XXX.......XXX", "XXX.......XXX", "XXX.......XXX", "XXXX.....XXXX", ".X..X...X..X.", "..X.XXXXX.X..", "...XXXXXXX...", "....XXXXX...."], "39-anarchiving": [".............", "...XXXXX.....", "..X.....X.X..", ".X.......X...", "X..XXXXX..X.X", "XXX.....XXX..", "X.........X..", "XXX.....XXXX.", "X..XXXXX..X..", ".X.......X...", "..X.....X...X", "...XXXXX..X..", "............."], "41-we-are-cactus": [".....X.....", "....X.X....", ".....X.....", "....XXX....", "....XXX..X.", ".X..XXX.XX.", "XX..XXX.XX.", "XX..XXXXX..", "XXX.XXX....", ".XXXXXX....", "....XXX....", "..XXXXXXX..", "...XXXXX..."], "42-gnomes-in-our-computer": ["......X......", ".....XX......", ".....XXX.....", "....XXXX.....", "...XXXXXX....", "..XXXXXXXX...", "XXXXXXXXXXXXX", "X...........X", "X..X.....X..X", "X...........X", "X..XXXXXXX..X", "X...XXXXX...X", "XXXXXXXXXXXXX", "....XXXXX...."], "51-differential-machine": ["..X.X.........", ".XXXXX........", "XXX.XXX.......", ".X...X........", "XXX.XXX..X.X..", ".XXXXX..XXXXX.", "..X.X..XXX.XXX", "........X...X.", ".......XXX.XXX", "........XXXXX.", ".........X.X.."], "52-return-to-the-shoggoth": ["....XXXX.....", "..XXXXXXXX...", ".XXX.XXXXXX..", ".XXXXXX.XXXX.", "XX.XXXXXXX.XX", "XXXXX.XXXXXXX", "XXXXXXXXX.XXX", ".XX.XXXXXXXX.", ".XXXXX.XXXXX.", "X.XX.XXX.XX.X", "X..X..X..X..X", ".X..X..X..X.."], "55-nerves-out": ["X...X.X......", ".X...XX.....X", "..X..XX....X.", ".XXX..X..XX..", "....X.X.X.XX.", ".....XXX.....", ".....XXX.....", ".....XXXX....", "....X....X...", "..XX.....XXX.", "..X......X..X", ".X.......X...", "X........X..."], "57-goodbye-poverty-jetset": ["X............", "XX...........", "XXX..........", "XXXXXXX.X.X..", ".XXXXXXXXXXXX", "....XXX......", "...XXX.......", "..XXX........", ".............", ".........X...", ".........XX..", "........XXX..", ".........X..."]}};
+const KEY = 'pixel-lab-v1';
+let DATA = JSON.parse(JSON.stringify(ORIG));
+try { const s = localStorage.getItem(KEY); if (s) { const p = JSON.parse(s); for (const st in p) for (const k in p[st]) if (DATA[st]) DATA[st][k] = p[st][k]; } } catch (e) {}
+let curSet = Object.keys(DATA)[0], curName = Object.keys(DATA[curSet])[0];
+let grid = [], hist = [], mirror = false, ink = '#0000FF';
+const toGrid = rows => rows.map(r => [...r].map(c => c === 'X' ? 1 : 0));
+const toRows = g => g.map(r => r.map(v => v ? 'X' : '.').join(''));
+const W = () => grid[0].length, H = () => grid.length;
+function save() { DATA[curSet][curName] = toRows(grid); try { const diff = {}; for (const st in DATA) for (const k in DATA[st]) if (JSON.stringify(DATA[st][k]) !== JSON.stringify(ORIG[st][k])) { (diff[st] = diff[st] || {})[k] = DATA[st][k]; } localStorage.setItem(KEY, JSON.stringify(diff)); } catch (e) {} }
+function push() { hist.push(JSON.stringify(grid)); if (hist.length > 80) hist.shift(); }
+function msg(t) { document.getElementById('msg').textContent = t; }
+
+function nb(g, x, y, diag) {
+  let n4 = 0, nd = 0; const h = g.length, w = g[0].length;
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    if (!dx && !dy) continue; const nx = x + dx, ny = y + dy;
+    if (nx < 0 || ny < 0 || nx >= w || ny >= h || !g[ny][nx]) continue;
+    if (dx && dy) nd++; else n4++;
+  }
+  return [n4, nd];
+}
+function lint(g) {
+  const orph = [], diag = []; let ink = 0;
+  for (let y = 0; y < g.length; y++) for (let x = 0; x < g[0].length; x++) if (g[y][x]) {
+    ink++; const [a, b] = nb(g, x, y); if (!a && !b) orph.push([x, y]); else if (!a) diag.push([x, y]);
+  }
+  let sym = true; for (const r of g) for (let x = 0; x < r.length; x++) if (r[x] !== r[r.length - 1 - x]) sym = false;
+  return { orph, diag, ink, density: ink / (g.length * g[0].length), sym };
+}
+function drawTo(cv, g, s, col, bg) {
+  cv.width = g[0].length * s; cv.height = g.length * s; const c = cv.getContext('2d');
+  c.imageSmoothingEnabled = false; c.clearRect(0, 0, cv.width, cv.height);
+  if (bg) { c.fillStyle = bg; c.fillRect(0, 0, cv.width, cv.height); }
+  c.fillStyle = col; g.forEach((r, y) => r.forEach((v, x) => { if (v) c.fillRect(x * s, y * s, s, s); }));
+}
+function svgOf(g, col) {
+  let d = ''; g.forEach((r, y) => { let x = 0; while (x < r.length) { if (r[x]) { let s = x; while (x < r.length && r[x]) x++; d += `M${s} ${y}h${x - s}v1h-${x - s}z`; } else x++; } });
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${g[0].length} ${g.length}" width="${g[0].length * 32}" height="${g.length * 32}" shape-rendering="crispEdges"><path fill="${col}" d="${d}"/></svg>`;
+}
+function pngBlob(g, col, s) { const cv = document.createElement('canvas'); drawTo(cv, g, s, col); return new Promise(r => cv.toBlob(r, 'image/png')); }
+
+function renderSets() {
+  const nav = document.getElementById('sets'); nav.innerHTML = '';
+  for (const st of Object.keys(DATA)) { const b = document.createElement('button'); b.textContent = st; b.className = st === curSet ? 'on' : ''; b.onclick = () => { curSet = st; curName = Object.keys(DATA[st])[0]; load(); }; nav.appendChild(b); }
+}
+function renderList() {
+  const L = document.getElementById('list'); L.innerHTML = '';
+  for (const k of Object.keys(DATA[curSet])) {
+    const g = toGrid(DATA[curSet][k]); const li = lint(g);
+    const b = document.createElement('button'); b.className = 'card' + (k === curName ? ' sel' : '');
+    const cv = document.createElement('canvas'); drawTo(cv, g, Math.max(2, Math.floor(72 / Math.max(g.length, g[0].length))), ink);
+    const n = document.createElement('div'); n.className = 'nm'; n.textContent = k;
+    const w = document.createElement('div'); w.className = 'bd'; w.textContent = li.orph.length ? `${li.orph.length} orfani` : '';
+    b.append(cv, n, w); b.onclick = () => { curName = k; load(); }; L.appendChild(b);
+  }
+}
+function renderSide() {
+  const P = document.getElementById('prev'); P.innerHTML = '';
+  for (const [s, bg, col] of [[1, '#D9D9D9', '#0000FF'], [2, '#D9D9D9', '#0000FF'], [4, '#0000FF', '#D9D9D9'], [4, '#D9D9D9', '#0000FF']]) {
+    const d = document.createElement('div'); d.style.background = bg; const cv = document.createElement('canvas'); drawTo(cv, grid, s, col); d.appendChild(cv); P.appendChild(d);
+  }
+  const li = lint(grid);
+  document.getElementById('stats').innerHTML =
+    `griglia   ${W()} × ${H()}\ninchiostro ${li.ink} px · ${(li.density * 100).toFixed(0)}%\nsimmetria ${li.sym ? 'sì' : 'no'}\n` +
+    `<span class="${li.orph.length ? 'warn' : ''}">orfani    ${li.orph.length}</span>\n<span class="${li.diag.length ? 'warn' : ''}">solo diag ${li.diag.length}</span>`;
+  document.getElementById('name').textContent = `${curSet} / ${curName}`;
+}
+function refresh() { save(); renderSide(); renderList(); }
+function load() { grid = toGrid(DATA[curSet][curName]); hist = []; renderSets(); renderList(); renderSide(); if (window.P5) P5.fit(); msg(''); }
+
+const OPS = {
+  undo() { if (hist.length) grid = JSON.parse(hist.pop()); },
+  reset() { push(); grid = toGrid(ORIG[curSet][curName]); },
+  flipH() { push(); grid = grid.map(r => r.slice().reverse()); },
+  flipV() { push(); grid = grid.slice().reverse(); },
+  outline() { push(); const g = grid; grid = g.map((r, y) => r.map((v, x) => v && nb(g, x, y)[0] < 4 ? 1 : 0)); },
+  fill() { push(); const h = H(), w = W(), out = grid.map(r => r.map(() => 0)); const st = [];
+    for (let x = 0; x < w; x++) { st.push([x, 0], [x, h - 1]); } for (let y = 0; y < h; y++) { st.push([0, y], [w - 1, y]); }
+    while (st.length) { const [x, y] = st.pop(); if (x < 0 || y < 0 || x >= w || y >= h || out[y][x] || grid[y][x]) continue; out[y][x] = 1; st.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]); }
+    grid = grid.map((r, y) => r.map((v, x) => out[y][x] ? 0 : 1)); },
+  dither() { push(); const g = grid; grid = g.map((r, y) => r.map((v, x) => v && (nb(g, x, y)[0] < 4 || (x + y) % 2 === 0) ? 1 : 0)); },
+  invert() { push(); grid = grid.map(r => r.map(v => v ? 0 : 1)); },
+  orphans() { push(); const g = grid; grid = g.map((r, y) => r.map((v, x) => { if (!v) return 0; const [a, b] = nb(g, x, y); return a || b ? 1 : 0; })); },
+  L() { push(); grid = grid.map(r => [...r.slice(1), 0]); }, R() { push(); grid = grid.map(r => [0, ...r.slice(0, -1)]); },
+  U() { push(); grid = [...grid.slice(1), grid[0].map(() => 0)]; }, D() { push(); grid = [grid[0].map(() => 0), ...grid.slice(0, -1)]; },
+  addC() { push(); grid = grid.map(r => [0, ...r, 0]); }, remC() { if (W() > 3) { push(); grid = grid.map(r => r.slice(1, -1)); } },
+  addR() { push(); grid = [grid[0].map(() => 0), ...grid, grid[0].map(() => 0)]; }, remR() { if (H() > 3) { push(); grid = grid.slice(1, -1); } },
+  trim() { push(); let x0 = W(), x1 = -1, y0 = H(), y1 = -1; grid.forEach((r, y) => r.forEach((v, x) => { if (v) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } }));
+    if (x1 >= 0) grid = grid.slice(y0, y1 + 1).map(r => r.slice(x0, x1 + 1)); },
+};
+document.querySelectorAll('[data-op]').forEach(b => b.onclick = () => { OPS[b.dataset.op](); refresh(); P5.fit(); });
+document.getElementById('mirror').onclick = e => { mirror = !mirror; e.currentTarget.classList.toggle('on', mirror); };
+document.querySelectorAll('.ink').forEach(b => b.onclick = () => { ink = b.dataset.ink; document.querySelectorAll('.ink').forEach(x => x.classList.toggle('on', x === b)); renderList(); });
+
+let downloads = null; (async () => { try { downloads = await window.claude?.use?.('downloads'); } catch (e) {} if (!downloads) document.querySelectorAll('[data-ex]').forEach(b => b.disabled = true); })();
+async function give(filename, data) { if (!downloads) { msg('Download non disponibile in questa vista.'); return; } try { await downloads.save({ filename, data }); msg('Salvato: ' + filename); } catch (e) { msg(e && e.code === 'declined' ? 'Download annullato.' : 'Download non riuscito.'); } }
+document.querySelectorAll('[data-ex]').forEach(b => b.onclick = async () => {
+  const t = b.dataset.ex, base = `${curSet}-${curName}`;
+  if (t === 'png') give(base + '.png', await pngBlob(grid, ink, 32));
+  if (t === 'svg') give(base + '.svg', new Blob([svgOf(grid, ink)], { type: 'image/svg+xml' }));
+  if (t === 'json') give('reincantamento-icons.json', new Blob([JSON.stringify(DATA, null, 1)], { type: 'application/json' }));
+  if (t === 'zip') { if (!window.JSZip) { msg('ZIP non disponibile.'); return; } const z = new JSZip();
+    for (const k in DATA[curSet]) { const g = toGrid(DATA[curSet][k]);
+      z.file(`svg/${k}.svg`, svgOf(g, '#0000FF'));
+      z.file(`png-blue/${k}.png`, await pngBlob(g, '#0000FF', 32)); z.file(`png-grey/${k}.png`, await pngBlob(g, '#D9D9D9', 32)); }
+    give(curSet + '-icons.zip', await z.generateAsync({ type: 'blob' })); }
+});
+
+const P5 = new p5(p => {
+  let cs = 24, painting = null, ready = false;
+  p.fit = () => { if (!ready) return; const box = document.getElementById('p5wrap'); const maxW = Math.min(560, (document.getElementById('editor').clientWidth || 560) - 8);
+    cs = Math.max(8, Math.floor(Math.min(maxW / W(), 560 / H()))); p.resizeCanvas(W() * cs, H() * cs); };
+  p.setup = () => { p.pixelDensity(1); p.noSmooth(); const c = p.createCanvas(10, 10); c.parent('p5wrap'); ready = true; p.fit(); };
+  p.draw = () => {
+    const css = getComputedStyle(document.documentElement);
+    p.background(css.getPropertyValue('--bg').trim() || '#D9D9D9');
+    p.noStroke(); p.fill(css.getPropertyValue('--fg').trim() || ink);
+    for (let y = 0; y < H(); y++) for (let x = 0; x < W(); x++) if (grid[y][x]) p.rect(x * cs, y * cs, cs, cs);
+    p.stroke(css.getPropertyValue('--line').trim()); p.strokeWeight(1); p.drawingContext.globalAlpha = .18;
+    for (let x = 0; x <= W(); x++) p.line(x * cs, 0, x * cs, H() * cs); for (let y = 0; y <= H(); y++) p.line(0, y * cs, W() * cs, y * cs);
+    p.drawingContext.globalAlpha = 1;
+    if (mirror) { p.stroke(css.getPropertyValue('--warn').trim()); p.strokeWeight(2); p.line(W() * cs / 2, 0, W() * cs / 2, H() * cs); }
+    const li = lint(grid); p.noFill(); p.stroke(css.getPropertyValue('--warn').trim()); p.strokeWeight(3);
+    for (const [x, y] of li.orph) p.rect(x * cs + 2, y * cs + 2, cs - 4, cs - 4);
+  };
+  const cell = () => { const x = Math.floor(p.mouseX / cs), y = Math.floor(p.mouseY / cs); return x >= 0 && y >= 0 && x < W() && y < H() ? [x, y] : null; };
+  const paint = c => { const [x, y] = c; grid[y][x] = painting; if (mirror) grid[y][W() - 1 - x] = painting; };
+  p.mousePressed = () => { const c = cell(); if (!c) return; push(); painting = grid[c[1]][c[0]] ? 0 : 1; paint(c); return false; };
+  p.mouseDragged = () => { if (painting === null) return; const c = cell(); if (c) paint(c); return false; };
+  p.mouseReleased = () => { if (painting !== null) { painting = null; refresh(); } };
+  p.touchStarted = () => { const c = cell(); if (!c) return; push(); painting = grid[c[1]][c[0]] ? 0 : 1; paint(c); return false; };
+  p.touchMoved = () => { if (painting === null) return; const c = cell(); if (c) paint(c); return false; };
+  p.touchEnded = () => { if (painting !== null) { painting = null; refresh(); } };
+  p.windowResized = () => p.fit();
+});
+window.P5 = P5;
+load();
+</script>
+</body>
+</html>
