@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52.05 52.05">
+  <g fill="blue">
+    <rect x="22.77" y="0.00" width="6.51" height="3.25"/>
+    <rect x="3.25" y="3.25" width="6.51" height="3.25"/>
+    <rect x="22.77" y="3.25" width="6.51" height="3.25"/>
+    <rect x="42.29" y="3.25" width="6.51" height="3.25"/>
+    <rect x="3.25" y="6.51" width="9.76" height="3.25"/>
+    <rect x="22.77" y="6.51" width="6.51" height="3.25"/>
+    <rect x="39.04" y="6.51" width="9.76" height="3.25"/>
+    <rect x="6.51" y="9.76" width="9.76" height="3.25"/>
+    <rect x="22.77" y="9.76" width="6.51" height="3.25"/>
+    <rect x="35.78" y="9.76" width="9.76" height="3.25"/>
+    <rect x="9.76" y="13.01" width="6.51" height="3.25"/>
+    <rect x="35.78" y="13.01" width="6.51" height="3.25"/>
+    <rect x="0.00" y="22.77" width="13.01" height="3.25"/>
+    <rect x="22.77" y="22.77" width="6.51" height="3.25"/>
+    <rect x="39.04" y="22.77" width="13.01" height="3.25"/>
+    <rect x="0.00" y="26.02" width="13.01" height="3.25"/>
+    <rect x="22.77" y="26.02" width="6.51" height="3.25"/>
+    <rect x="39.04" y="26.02" width="13.01" height="3.25"/>
+    <rect x="9.76" y="35.78" width="6.51" height="3.25"/>
+    <rect x="35.78" y="35.78" width="6.51" height="3.25"/>
+    <rect x="6.51" y="39.04" width="9.76" height="3.25"/>
+    <rect x="22.77" y="39.04" width="6.51" height="3.25"/>
+    <rect x="35.78" y="39.04" width="9.76" height="3.25"/>
+    <rect x="3.25" y="42.29" width="9.76" height="3.25"/>
+    <rect x="22.77" y="42.29" width="6.51" height="3.25"/>
+    <rect x="39.04" y="42.29" width="9.76" height="3.25"/>
+    <rect x="3.25" y="45.54" width="6.51" height="3.25"/>
+    <rect x="22.77" y="45.54" width="6.51" height="3.25"/>
+    <rect x="42.29" y="45.54" width="6.51" height="3.25"/>
+    <rect x="22.77" y="48.80" width="6.51" height="3.25"/>
+  </g>
+</svg>

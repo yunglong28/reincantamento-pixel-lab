@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640.00 640.00">
+  <rect width="640.00" height="640.00" fill="#d9d9d9"/>
+  <g fill="blue">
+    <rect x="300.00" y="160.00" width="40.00" height="20.00"/>
+    <rect x="180.00" y="180.00" width="40.00" height="20.00"/>
+    <rect x="300.00" y="180.00" width="40.00" height="20.00"/>
+    <rect x="420.00" y="180.00" width="40.00" height="20.00"/>
+    <rect x="180.00" y="200.00" width="60.00" height="20.00"/>
+    <rect x="300.00" y="200.00" width="40.00" height="20.00"/>
+    <rect x="400.00" y="200.00" width="60.00" height="20.00"/>
+    <rect x="200.00" y="220.00" width="60.00" height="20.00"/>
+    <rect x="300.00" y="220.00" width="40.00" height="20.00"/>
+    <rect x="380.00" y="220.00" width="60.00" height="20.00"/>
+    <rect x="220.00" y="240.00" width="40.00" height="20.00"/>
+    <rect x="380.00" y="240.00" width="40.00" height="20.00"/>
+    <rect x="160.00" y="300.00" width="80.00" height="20.00"/>
+    <rect x="300.00" y="300.00" width="40.00" height="20.00"/>
+    <rect x="400.00" y="300.00" width="80.00" height="20.00"/>
+    <rect x="160.00" y="320.00" width="80.00" height="20.00"/>
+    <rect x="300.00" y="320.00" width="40.00" height="20.00"/>
+    <rect x="400.00" y="320.00" width="80.00" height="20.00"/>
+    <rect x="220.00" y="380.00" width="40.00" height="20.00"/>
+    <rect x="380.00" y="380.00" width="40.00" height="20.00"/>
+    <rect x="200.00" y="400.00" width="60.00" height="20.00"/>
+    <rect x="300.00" y="400.00" width="40.00" height="20.00"/>
+    <rect x="380.00" y="400.00" width="60.00" height="20.00"/>
+    <rect x="180.00" y="420.00" width="60.00" height="20.00"/>
+    <rect x="300.00" y="420.00" width="40.00" height="20.00"/>
+    <rect x="400.00" y="420.00" width="60.00" height="20.00"/>
+    <rect x="180.00" y="440.00" width="40.00" height="20.00"/>
+    <rect x="300.00" y="440.00" width="40.00" height="20.00"/>
+    <rect x="420.00" y="440.00" width="40.00" height="20.00"/>
+    <rect x="300.00" y="460.00" width="40.00" height="20.00"/>
+  </g>
+</svg>
